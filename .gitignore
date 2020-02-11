@@ -1,0 +1,10 @@
+__pycache__
+*.pyc
+*.tar.gz
+.DS_Store
+
+.vscode/
+.idea/
+venv/
+
+appconfig.json
