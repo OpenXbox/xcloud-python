@@ -4,6 +4,8 @@ from pydantic import BaseModel
 
 
 class StreamSetupState(str, Enum):
+    WaitingForResources = 'WaitingForResources'
+    ReadyToConnect = 'ReadyToConnect'
     Provisioning = 'Provisioning'
     Provisioned = 'Provisioned'
 
