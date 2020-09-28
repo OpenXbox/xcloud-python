@@ -16,6 +16,7 @@ from auth.signed_session import SignedSession
 from auth.request_signer import RequestSigner
 from auth.models import SisuAuthenticationResponse, SisuAuthorizationResponse,\
     WindowsLiveTokenResponse, XADResponse, XalClientParameters, XSTSResponse
+from auth.constants import XalDeviceType
 
 log = logging.getLogger('auth')
 
@@ -88,6 +89,17 @@ class XalAuthenticator(object):
 
     async def _get_device_token(self) -> httpx.Response:
         # Proof of posession: https://tools.ietf.org/html/rfc7800
+
+        client_uuid = str(self.client_id)
+
+        if self.client_data.DeviceType == XalDeviceType.Android:
+            # {decf45e4-945d-4379-b708-d4ee92c12d99}
+            client_uuid = "{%s}" % client_uuid
+        else:
+            # iOS
+            # DECF45E4-945D-4379-B708-D4EE92C12D99
+            client_uuid = client_uuid.upper()
+
         url = 'https://device.auth.xboxlive.com/device/authenticate'
         headers = {
             'x-xbl-contract-version': '1',
@@ -98,8 +110,7 @@ class XalAuthenticator(object):
             'TokenType': 'JWT',
             'Properties': {
                 'AuthMethod': 'ProofOfPossession',
-                # Android Gamestreaming Preview used curly bracket notation: "Id": "{*UUID*}"
-                'Id': str(self.client_id).upper(),
+                'Id': client_uuid,
                 'DeviceType': self.client_data.DeviceType,
                 'Version': self.client_data.ClientVersion,
                 'ProofKey': self.session.request_signer.proof_field
