@@ -181,27 +181,22 @@ class XCloudApi:
         stream_session = await self._request_stream(base_url, gametitle.titleId)
         print(f':: Stream session {stream_session}')
 
-        print(':: Waiting for stream ReadyToConnect...')
+        print(':: Waiting for stream')
         while True:
             state = await self._get_session_state(base_url, stream_session.sessionPath)
+            print(state.state)
             if state.state == StreamSetupState.ReadyToConnect:
+                print(':: Connecting to stream')
+                success = await self._connect_to_session(
+                    base_url, stream_session.sessionPath, self.xcloud_token.lpt
+                )
+                if not success:
+                    print(':: Failed to connect to session')
+                    return
+            elif state.state == StreamSetupState.Provisioned:
                 break
-            await asyncio.sleep(100)
 
-        print(':: Connecting to stream')
-        success = await self._connect_to_session(
-            base_url, stream_session.sessionPath, self.xcloud_token.lpt
-        )
-        if not success:
-            print(':: Failed to connect to session')
-            return
-
-        print(':: Waiting for provisioning')
-        while True:
-            state = await self._get_session_state(base_url, stream_session.sessionPath)
-            if state.state == StreamSetupState.Provisioned:
-                break
-            await asyncio.sleep(100)
+            await asyncio.sleep(1)
 
         print(':: Requesting config')
         config = await self._get_stream_config(base_url, stream_session.sessionPath)

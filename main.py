@@ -5,12 +5,13 @@ import asyncio
 
 from common import AppConfiguration
 
-from auth.constants import IOS_XBOXBETA_APP_PARAMS
+from auth.constants import IOS_XBOXBETA_APP_PARAMS, ANDROID_GAMEPASS_BETA_PARAMS
 from auth.models import XalClientParameters, XSTSResponse
 from auth.xal_auth import XalAuthenticator
 from auth.request_signer import RequestSigner
 
 from smartglass_api import SmartglassApi
+from xcloud_api import XCloudApi
 from xhomestreaming_api import XHomeStreamingApi
 
 APP_CONFIG_FILE = "appconfig.json"
@@ -66,6 +67,33 @@ async def test_xhome_streaming(
     await xhome_api.session.aclose()
 
 
+async def test_xcloud_streaming(
+    config: AppConfiguration
+):
+    xal = XalAuthenticator(
+        config.ClientUUID,
+        config.XalParameters,
+        RequestSigner.from_pem(config.SigningKey)
+    )
+
+    print(':: Requesting XSTS Token (RelyingParty: http://gssv.xboxlive.com)')
+    gssv_token = await xal.xsts_authorization(
+        config.Authorization.DeviceToken,
+        config.Authorization.TitleToken.Token,
+        config.Authorization.UserToken.Token,
+        relying_party='http://gssv.xboxlive.com/'
+    )
+    print(':: Exchanging refresh token for xcloud transfer token')
+    xcloud_token = await xal.exchange_refresh_token_for_xcloud_transfer_token(
+        config.WindowsLiveTokens.refresh_token
+    )
+    await xal.session.aclose()
+
+    xhome_api = XCloudApi(gssv_token, xcloud_token)
+    await xhome_api.start_streaming()
+    await xhome_api.session.aclose()
+
+
 async def main():
     """
     Prepare needed values
@@ -80,7 +108,7 @@ async def main():
             ClientUUID=uuid.uuid4(),
             SigningKey=RequestSigner().export_signing_key(),
             XalParameters=XalClientParameters.parse_obj(
-                IOS_XBOXBETA_APP_PARAMS
+                ANDROID_GAMEPASS_BETA_PARAMS  # NOTE: XBOXBETA APP -> XHOME, XBOXGAMEPASS BETA -> XCLOUD!
             )
         )
 
@@ -105,6 +133,7 @@ async def main():
     with io.open(APP_CONFIG_FILE, 'wt') as f:
         f.write(config.json(indent=2))
 
+    """
     smartglass = SmartglassApi(
         request_signer,
         config.Authorization.AuthorizationToken
@@ -116,9 +145,11 @@ async def main():
 
     console = choose_console(console_list)
     console_liveid = console.id
+    """
 
     # test_smartglass_api(smartglass, console_liveid)
-    await test_xhome_streaming(config, console_liveid)
+    await test_xcloud_streaming(config)
+    # await test_xhome_streaming(config, console_liveid)
 
 
 if __name__ == '__main__':

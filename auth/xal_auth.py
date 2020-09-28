@@ -183,7 +183,7 @@ class XalAuthenticator(object):
 
         return await self.__oauth20_token_endpoint(post_body)
 
-    async def _exchange_refresh_token_for_xcloud_transfer_token(
+    async def exchange_refresh_token_for_xcloud_transfer_token(
         self,
         refresh_token_jwt: str
     ) -> XCloudTokenResponse:
