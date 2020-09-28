@@ -1,7 +1,7 @@
 import asyncio
 import httpx
 import uuid
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import ms_cv
 from auth.models import SisuAuthorizationResponse, XSTSResponse
@@ -320,9 +320,11 @@ class SmartglassApi:
 
     async def command_shell_install_packages(
         self,
-        console_live_id: str
+        console_live_id: str,
+        big_cat_ids: List[str]
     ) -> CommandResponse:
-        return await self._send_command(console_live_id, "Shell", "InstallPackages")
+        params = [{"bigCatIdList": ','.join(big_cat_ids)}]
+        return await self._send_command(console_live_id, "Shell", "InstallPackages", params)
 
     async def command_shell_uninstall_package(
         self,
