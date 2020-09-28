@@ -2,13 +2,20 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
+class TitleSupportedTab(BaseModel):
+    id: str
+    tabVersion: str
+    layoutVersion: str
+    manifestVersion: str
+
+
 class CloudGameTitleDetails(BaseModel):
     productId: str
-    xboxTitleId: int
+    xboxTitleId: Optional[int]
     hasEntitlement: bool
     blockedByFamilySafety: bool
     supportsInAppPurchases: bool
-    supportedTabs: Optional[str]
+    supportedTabs: Optional[List[TitleSupportedTab]]
     nativeTouch: bool
 
 

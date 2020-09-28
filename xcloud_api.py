@@ -1,5 +1,6 @@
 import asyncio
 from urllib.parse import urljoin
+from typing import List
 
 import httpx
 import ms_cv
@@ -7,7 +8,7 @@ import ms_cv
 from auth.models import XSTSResponse, XCloudTokenResponse
 from streaming_models import StreamLoginResponse, StreamSessionResponse, \
     StreamStateResponse, StreamConfig, StreamSetupState
-from xcloud_models import TitlesResponse, TitleWaitTimeResponse
+from xcloud_models import TitlesResponse, TitleWaitTimeResponse, CloudGameTitle
 
 USER_AGENT_ANDROID = '{"conn":{"cell":{"carrier":"congstar","mcc":"262","mnc":"01","networkDetail":"{\"ci\":\"unknown\",\"pci\":\"unknown\",\"rat\":\"unknown\",\"signalStrengthDbm\":\"-2147483648\",\"pilotPowerSignalQuality\":\"-2147483648\",\"snr\":\"-2147483648\"}","roaming":"NotRoaming","strengthPct":100},"type":"Wifi","wifi":{"freq":5300,"strengthDbm":-60,"strengthPct":88}},"dev":{"hw":{"make":"Google","model":"Pixel 3a"},"os":{"name":"Android","ver":"11-RP1A.200720.009-30"}}}'
 
@@ -65,7 +66,7 @@ class XCloudApi:
     async def _get_titles_2(
         self,
         base_url: str,
-        count: int = 25,
+        count: int = 10,
         continuation_token: str = None
     ) -> TitlesResponse:
         url = urljoin(base_url, '/v1/titles/mru')
@@ -155,6 +156,35 @@ class XCloudApi:
         resp.raise_for_status()
         return StreamConfig.parse_obj(resp.json())
 
+    async def get_all_titles(self, base_url: str) -> List[CloudGameTitle]:
+        titles_collection = []
+
+        titles_2_resp = await self._get_titles_2(base_url)
+        titles_collection.extend(titles_2_resp.results)
+
+        titles_count = 25
+        titles_resp = await self._get_titles(base_url, count=25)
+        titles_total_items = titles_resp.totalItems
+        titles_collection.extend(titles_resp.results)
+
+        while titles_count < titles_total_items:
+            titles_resp = await self._get_titles(
+                base_url,
+                count=25,
+                continuation_token=titles_resp.continuationToken
+            )
+            titles_collection.extend(titles_resp.results)
+            titles_count += 25
+
+        return titles_collection
+
+    def choose_game(self, titles: List[CloudGameTitle]) -> CloudGameTitle:
+        for idx, t in enumerate(titles):
+            print(f'{idx}) Title Id: {t.titleId}, Product Id: {t.details.productId}')
+
+        choice = int(input('Choose game: '))
+        return titles[choice]
+
     async def start_streaming(self):
         print(':: CLOUD GS - Logging in ::')
         login_data = await self._do_login()
@@ -171,14 +201,14 @@ class XCloudApi:
                 base_url = server.baseUri
                 break
 
-        titles = await self._get_titles(base_url, count=25)
-        gametitle = titles.results[0]
-        print(f':: Chose Game: {gametitle}')
+        titles = await self.get_all_titles(base_url)
+        chosen_title = self.choose_game(titles)
+        print(f':: Chose Game: {chosen_title}')
 
-        wait_time = await self._fetch_wait_time(base_url, gametitle.titleId)
+        wait_time = await self._fetch_wait_time(base_url, chosen_title.titleId)
         print(f':: Estimated wait time for provisioning: {wait_time}')
 
-        stream_session = await self._request_stream(base_url, gametitle.titleId)
+        stream_session = await self._request_stream(base_url, chosen_title.titleId)
         print(f':: Stream session {stream_session}')
 
         print(':: Waiting for stream')
