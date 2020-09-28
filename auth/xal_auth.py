@@ -14,8 +14,9 @@ from typing import Optional
 import ms_cv
 from auth.signed_session import SignedSession
 from auth.request_signer import RequestSigner
-from auth.models import SisuAuthenticationResponse, SisuAuthorizationResponse,\
-    WindowsLiveTokenResponse, XADResponse, XalClientParameters, XSTSResponse
+from auth.models import SisuAuthenticationResponse, SisuAuthorizationResponse, \
+    WindowsLiveTokenResponse, XADResponse, XalClientParameters, XSTSResponse, \
+    XCloudTokenResponse
 from auth.constants import XalDeviceType
 
 log = logging.getLogger('auth')
@@ -152,15 +153,25 @@ class XalAuthenticator(object):
         request = self.session.build_request('POST', url, headers=headers, json=post_body)
         return await self.session.send_signed(request)
 
-    async def _exchange_code_for_token(
-        self,
-        authorization_code: str,
-        code_verifier: str
+    async def __oauth20_token_endpoint(
+        self, json_body: dict
     ) -> httpx.Response:
         url = 'https://login.live.com/oauth20_token.srf'
         headers = {
             'MS-CV': self.cv.increment()
         }
+
+        # NOTE: No signature necessary
+        request = self.session.build_request(
+            'POST', url, headers=headers, data=json_body
+        )
+        return await self.session.send(request)
+
+    async def _exchange_code_for_token(
+        self,
+        authorization_code: str,
+        code_verifier: str
+    ) -> httpx.Response:
         post_body = {
             'client_id': self.client_data.AppId,
             'code': authorization_code,
@@ -170,15 +181,24 @@ class XalAuthenticator(object):
             'scope': 'service::user.auth.xboxlive.com::MBI_SSL'
         }
 
-        # NOTE: No signature necessary
-        request = self.session.build_request('POST', url, headers=headers, data=post_body)
-        return await self.session.send(request)
+        return await self.__oauth20_token_endpoint(post_body)
+
+    async def _exchange_refresh_token_for_xcloud_transfer_token(
+        self,
+        refresh_token_jwt: str
+    ) -> XCloudTokenResponse:
+        post_body = {
+            'client_id': self.client_data.AppId,
+            'refresh_token': refresh_token_jwt,
+            'grant_type': 'refresh_token',
+            'scope': 'service::http://Passport.NET/purpose::PURPOSE_XBOX_CLOUD_CONSOLE_TRANSFER_TOKEN'
+        }
+
+        resp = await self.__oauth20_token_endpoint(post_body)
+        resp.raise_for_status()
+        return XCloudTokenResponse.parse_obj(resp.json())
 
     async def _refresh_token(self, refresh_token_jwt: str) -> httpx.Response:
-        url = 'https://login.live.com/oauth20_token.srf'
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
         post_body = {
             'client_id': self.client_data.AppId,
             'refresh_token': refresh_token_jwt,
@@ -187,9 +207,7 @@ class XalAuthenticator(object):
             'scope': 'service::user.auth.xboxlive.com::MBI_SSL'
         }
 
-        # NOTE: No signature necessary
-        request = self.session.build_request('POST', url, headers=headers, data=post_body)
-        return await self.session.send(request)
+        return await self.__oauth20_token_endpoint(post_body)
 
     async def _do_sisu_authorization(
         self,

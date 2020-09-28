@@ -35,7 +35,7 @@ class OfferingSettings(BaseModel):
     clientCloudSettings: ClientCloudSettings
 
 
-class XHomeLoginResponse(BaseModel):
+class StreamLoginResponse(BaseModel):
     offeringSettings: OfferingSettings
     market: str
     gsToken: str
@@ -44,9 +44,9 @@ class XHomeLoginResponse(BaseModel):
 
 
 class StreamSessionResponse(BaseModel):
-    sessionId: str
+    sessionId: Optional[str]
     sessionPath: str
-    state: StreamSetupState
+    state: Optional[StreamSetupState]
 
 
 class StreamErrorDetails(BaseModel):
@@ -56,8 +56,9 @@ class StreamErrorDetails(BaseModel):
 
 class StreamStateResponse(BaseModel):
     state: StreamSetupState
-    detailedSessionState: int
-    errorDetails: StreamErrorDetails
+    detailedSessionState: Optional[int]
+    errorDetails: Optional[StreamErrorDetails]
+    transferUri: Optional[str]
 
 
 class StreamSRtpData(BaseModel):

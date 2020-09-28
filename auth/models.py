@@ -81,6 +81,12 @@ class WindowsLiveTokenResponse(BaseModel):
     user_id: str
 
 
+class XCloudTokenResponse(BaseModel):
+    lpt: str
+    refresh_token: str
+    user_id: str
+
+
 class XalClientParameters(BaseModel):
     UserAgent: XalUserAgents
     AppId: XalAppId

@@ -9,7 +9,7 @@ import httpx
 from auth.models import XSTSResponse
 from ice import ICEHandler
 
-from xhome_models import XHomeLoginResponse, StreamSessionResponse, \
+from common_models import StreamLoginResponse, StreamSessionResponse, \
     StreamStateResponse, StreamConfig, StreamICEConfig
 
 USER_AGENT_IOS = '{"conn":{"cell":{"carrier":"","mcc":"","mnc":"","networkDetail":"","roaming":"Unknown","strengthPct":-1},"type":"Wifi","wifi":{"freq":-2147483648,"strengthDbm":-2147483648,"strengthPct":-1}},"dev":{"hw":{"make":"Apple","model":"iPad6,11"},"os":{"name":"iOS","ver":"14.0.1 (Build 18A393)"}}}'
@@ -31,7 +31,7 @@ class XHomeStreamingApi:
         self.cv = ms_cv.CorrelationVector()
         self.gssv_xsts_token = gssv_token
 
-    async def _do_login(self, offering_id: str = 'xhome') -> XHomeLoginResponse:
+    async def _do_login(self, offering_id: str = 'xhome') -> StreamLoginResponse:
         url = 'https://xhome.gssv-play-prod.xboxlive.com/v2/login/user'
         headers = {
             'MS-CV': self.cv.increment()
@@ -42,7 +42,7 @@ class XHomeStreamingApi:
         }
         resp = await self.session.post(url, headers=headers, json=post_body)
         resp.raise_for_status()
-        return XHomeLoginResponse.parse_obj(resp.json())
+        return StreamLoginResponse.parse_obj(resp.json())
 
     async def _request_stream(
         self, base_url: str, console_liveid: str
@@ -162,7 +162,7 @@ class XHomeStreamingApi:
         await ice_handler.transport.stop()
 
     async def start_streaming(self, console_liveid: str):
-        print(':: GS - Logging in ::')
+        print(':: HOME GS - Logging in ::')
         login_data = await self._do_login()
 
         print(':: Updating http authorization header ::')
