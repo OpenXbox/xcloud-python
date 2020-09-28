@@ -1,4 +1,5 @@
 import io
+import sys
 import uuid
 import time
 import asyncio
@@ -14,8 +15,8 @@ from smartglass_api import SmartglassApi
 from xcloud_api import XCloudApi
 from xhomestreaming_api import XHomeStreamingApi
 
-APP_CONFIG_FILE = "appconfig.json"
-
+APP_CONFIG_XBOXBETA_FILE = "appconfig.xboxbeta.json"
+APP_CONFIG_XBOXGAMEPASS_FILE = "appconfig.xboxgamepass.json"
 
 def choose_console(console_list):
     print('Please choose a console:')
@@ -94,13 +95,23 @@ async def test_xcloud_streaming(
     await xhome_api.session.aclose()
 
 
-async def main():
+async def main(command: str):
     """
     Prepare needed values
     """
 
+    if command == 'xhome' or command == 'smartglass':
+        app_config = APP_CONFIG_XBOXBETA_FILE
+        xal_params = IOS_XBOXBETA_APP_PARAMS
+    elif command == 'xcloud':
+        app_config = APP_CONFIG_XBOXGAMEPASS_FILE
+        xal_params = ANDROID_GAMEPASS_BETA_PARAMS
+    else:
+        print(':: Unexpected command...')
+        return
+
     try:
-        config = AppConfiguration.parse_file(APP_CONFIG_FILE)
+        config = AppConfiguration.parse_file(app_config)
     except Exception as e:
         print(f'Failed to parse app configuration! Err: {e}')
         print('Initializing new config...')
@@ -108,7 +119,7 @@ async def main():
             ClientUUID=uuid.uuid4(),
             SigningKey=RequestSigner().export_signing_key(),
             XalParameters=XalClientParameters.parse_obj(
-                ANDROID_GAMEPASS_BETA_PARAMS  # NOTE: XBOXBETA APP -> XHOME, XBOXGAMEPASS BETA -> XCLOUD!
+                xal_params
             )
         )
 
@@ -130,27 +141,38 @@ async def main():
     """
     Saving app config
     """
-    with io.open(APP_CONFIG_FILE, 'wt') as f:
+    with io.open(app_config, 'wt') as f:
         f.write(config.json(indent=2))
 
-    """
-    smartglass = SmartglassApi(
-        request_signer,
-        config.Authorization.AuthorizationToken
-    )
+    if command == 'smartglass' or command == 'xhome':
+        smartglass = SmartglassApi(
+            request_signer,
+            config.Authorization.AuthorizationToken
+        )
 
-    print(':: Getting console list')
-    console_list = await smartglass.get_console_list()
-    await smartglass.session.aclose()
+        print(':: Getting console list')
+        console_list = await smartglass.get_console_list()
+        await smartglass.session.aclose()
 
-    console = choose_console(console_list)
-    console_liveid = console.id
-    """
+        console = choose_console(console_list)
+        console_liveid = console.id
 
-    # test_smartglass_api(smartglass, console_liveid)
-    await test_xcloud_streaming(config)
-    # await test_xhome_streaming(config, console_liveid)
+        if command == 'smartglass':
+            await test_smartglass_api(smartglass, console_liveid)
+        else:
+            await test_xhome_streaming(config, console_liveid)
+    elif command == 'xcloud':
+        await test_xcloud_streaming(config)
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    if len(sys.argv) < 2:
+        print(':: Please provide a command! Choices: smartglass, xhome, xcloud')
+        sys.exit(1)
+
+    command = sys.argv[1]
+    if command not in ['smartglass', 'xhome', 'xcloud']:
+        print(':: You provided an invalid command!')
+        sys.exit(2)
+
+    asyncio.run(main(command))

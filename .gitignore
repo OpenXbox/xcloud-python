@@ -7,4 +7,4 @@ __pycache__
 .idea/
 venv/
 
-appconfig.json
+appconfig*
