@@ -5,7 +5,7 @@ import httpx
 import ms_cv
 
 from auth.models import XSTSResponse, XCloudTokenResponse
-from common_models import StreamLoginResponse, StreamSessionResponse, \
+from streaming_models import StreamLoginResponse, StreamSessionResponse, \
     StreamStateResponse, StreamConfig, StreamSetupState
 from xcloud_models import TitlesResponse, TitleWaitTimeResponse
 

@@ -8,7 +8,7 @@ from auth.models import SisuAuthorizationResponse, XSTSResponse
 from auth.signed_session import SignedSession
 from auth.request_signer import RequestSigner
 
-from models import SmartglassConsoleList, \
+from smartglass_models import SmartglassConsoleList, \
     SmartglassConsoleStatus, CommandResponse, VolumeDirection, InputKeyType,\
     MediaCommand, InstalledPackagesList, StorageDevicesList,\
     OperationStatusResponse

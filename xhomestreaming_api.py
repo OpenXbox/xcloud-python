@@ -9,7 +9,7 @@ import httpx
 from auth.models import XSTSResponse
 from ice import ICEHandler
 
-from common_models import StreamLoginResponse, StreamSessionResponse, \
+from streaming_models import StreamLoginResponse, StreamSessionResponse, \
     StreamStateResponse, StreamConfig, StreamICEConfig
 
 USER_AGENT_IOS = '{"conn":{"cell":{"carrier":"","mcc":"","mnc":"","networkDetail":"","roaming":"Unknown","strengthPct":-1},"type":"Wifi","wifi":{"freq":-2147483648,"strengthDbm":-2147483648,"strengthPct":-1}},"dev":{"hw":{"make":"Apple","model":"iPad6,11"},"os":{"name":"iOS","ver":"14.0.1 (Build 18A393)"}}}'
