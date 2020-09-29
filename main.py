@@ -42,6 +42,7 @@ async def test_smartglass_api(
 
     poweroff_resp = await smartglass.command_power_off(console_liveid)
     print(poweroff_resp)
+    await smartglass.session.aclose()
 
 
 async def test_xhome_streaming(
