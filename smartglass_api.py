@@ -36,17 +36,14 @@ class SmartglassApi:
 
     async def fetch_operation_status(
         self,
-        operation_id: Union[str, list],
+        operation_id: str,
         device_id: str
     ) -> OperationStatusResponse:
-        op_ids = operation_id if type(operation_id) == str else \
-                     ','.join(operation_id),
-
         url = f'https://xccs.xboxlive.com/opStatus'
         headers = {
             'MS-CV': self.cv.increment(),
             'x-xbl-contract-version': '3',
-            'x-xbl-opId': op_ids,
+            'x-xbl-opId': operation_id,
             'x-xbl-deviceId': device_id
         }
         request = self.session.build_request('GET', url, headers=headers)
