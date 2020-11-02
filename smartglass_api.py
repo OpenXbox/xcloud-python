@@ -1,7 +1,8 @@
 import asyncio
-import httpx
+import aiohttp
 import uuid
-from typing import Optional, Union, List
+from typing import Optional, List
+from urllib.parse import urljoin
 
 import ms_cv
 from auth.models import SisuAuthorizationResponse, XSTSResponse
@@ -15,6 +16,7 @@ from smartglass_models import SmartglassConsoleList, \
 
 
 class SmartglassApi:
+    BASE_URL = 'https://xccs.xboxlive.com'
     def __init__(
         self,
         request_signer: RequestSigner,
@@ -22,41 +24,42 @@ class SmartglassApi:
         user_agent: str = 'Xbox/2008.0915.0311 CFNetwork/1197 Darwin/20.0.0'
     ):
         self.cv = ms_cv.CorrelationVector()
+        self.session = SignedSession(request_signer)
 
         self.user_agent = user_agent
-        self.session = SignedSession(request_signer)
-        self.session.headers.update({
-            'User-Agent': self.user_agent,
-            'Authorization': xsts_token.authorization_header_value,
-            'x-xbl-contract-version': '4',
-            'skillplatform': 'RemoteManagement'
-        })
-
+        self.xsts_token = xsts_token
         self.smartglass_session_id = str(uuid.uuid4())
+
+    @property
+    def headers(self):
+        return {
+            'User-Agent': self.user_agent,
+            'Authorization': self.xsts_token.authorization_header_value,
+            'x-xbl-contract-version': '4',
+            'skillplatform': 'RemoteManagement',
+            'MS-CV': self.cv.increment()
+        }
 
     async def fetch_operation_status(
         self,
         operation_id: str,
         device_id: str
     ) -> OperationStatusResponse:
-        url = f'https://xccs.xboxlive.com/opStatus'
-        headers = {
-            'MS-CV': self.cv.increment(),
+        url = urljoin(self.BASE_URL, '/opStatus')
+        headers = self.headers.copy()
+        headers.update({
             'x-xbl-contract-version': '3',
             'x-xbl-opId': operation_id,
             'x-xbl-deviceId': device_id
-        }
-        request = self.session.build_request('GET', url, headers=headers)
+        })
+        request = self.session.build_request('GET', url, headers=self.headers)
         resp = await self.session.send_signed(request)
         resp.raise_for_status()
         return OperationStatusResponse.parse_obj(resp.json())
 
-    async def _fetchList(self, list_name: str, query_params: dict = None) -> httpx.Response:
-        url = f'https://xccs.xboxlive.com/lists/{list_name}'
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
-        request = self.session.build_request('GET', url, headers=headers, params=query_params)
+    async def _fetchList(self, list_name: str, query_params: dict = None) -> aiohttp.ClientResponse:
+        url = urljoin(self.BASE_URL, f'/lists/{list_name}')
+        request = self.session.build_request('GET', url, headers=self.headers, params=query_params)
         resp = await self.session.send_signed(request)
         resp.raise_for_status()
         return resp
@@ -84,11 +87,8 @@ class SmartglassApi:
         return InstalledPackagesList.parse_obj(resp.json())
 
     async def get_console_status(self, console_live_id: str) -> SmartglassConsoleStatus:
-        url = f'https://xccs.xboxlive.com/consoles/{console_live_id}'
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
-        request = self.session.build_request('GET', url, headers=headers)
+        url = urljoin(self.BASE_URL, f'/consoles/{console_live_id}')
+        request = self.session.build_request('GET', url, headers=self.headers)
         resp = await self.session.send_signed(request)
         resp.raise_for_status()
         return SmartglassConsoleStatus.parse_obj(resp.json())
@@ -103,10 +103,7 @@ class SmartglassApi:
         if not parameters:
             parameters = [{}]
 
-        url = f'https://xccs.xboxlive.com/commands'
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
+        url = urljoin(self.BASE_URL, '/commands')
         json_body = {
             "destination": "Xbox",
             "type": command_type,
@@ -116,7 +113,7 @@ class SmartglassApi:
             "parameters": parameters,
             "linkedXboxId": console_liveid
         }
-        request = self.session.build_request('POST', url, headers=headers, json=json_body)
+        request = self.session.build_request('POST', url, headers=self.headers, json=json_body)
         resp = await self.session.send_signed(request)
         resp.raise_for_status()
         return CommandResponse.parse_obj(resp.json())

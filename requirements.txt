@@ -1,5 +1,5 @@
 ecdsa
 ms_cv
 pydantic
-httpx
+aiohttp
 aiortc

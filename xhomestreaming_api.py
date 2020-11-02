@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 
 import ms_cv
 
-import httpx
+import aiohttp
 from auth.models import XSTSResponse
 from ice import ICEHandler
 
@@ -22,25 +22,27 @@ class XHomeStreamingApi:
         gssv_token: XSTSResponse,
         user_agent: str = USER_AGENT_IOS
     ):
-        self.session = httpx.AsyncClient()
-        self.session.headers.update({
-            'X-MS-Device-Info': user_agent,
-            'User-Agent': user_agent
-        })
-
+        self.session = aiohttp.ClientSession()
         self.cv = ms_cv.CorrelationVector()
+
+        self.user_agent = user_agent
         self.gssv_xsts_token = gssv_token
+
+    @property
+    def headers(self):
+        return {
+            'MS-CV': self.cv.increment(),
+            'X-MS-Device-Info': self.user_agent,
+            'User-Agent': self.user_agent
+        }
 
     async def _do_login(self, offering_id: str = 'xhome') -> StreamLoginResponse:
         url = 'https://xhome.gssv-play-prod.xboxlive.com/v2/login/user'
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
         post_body = {
             'offeringId': offering_id,
             'token': self.gssv_xsts_token.authorization_header_value
         }
-        resp = await self.session.post(url, headers=headers, json=post_body)
+        resp = await self.session.post(url, headers=self.headers, json=post_body)
         resp.raise_for_status()
         return StreamLoginResponse.parse_obj(resp.json())
 
@@ -48,9 +50,6 @@ class XHomeStreamingApi:
         self, base_url: str, console_liveid: str
     ) -> StreamSessionResponse:
         url = urljoin(base_url, '/v4/sessions/home/play')
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
         json_body = {
             "fallbackRegionNames": [],
             "serverId": console_liveid,
@@ -66,7 +65,7 @@ class XHomeStreamingApi:
             "titleId": ""
         }
 
-        resp = await self.session.post(url, json=json_body, headers=headers)
+        resp = await self.session.post(url, json=json_body, headers=self.headers)
         resp.raise_for_status()
         return StreamSessionResponse.parse_obj(resp.json())
 
@@ -74,10 +73,7 @@ class XHomeStreamingApi:
         self, base_url: str, session_path: str
     ) -> StreamStateResponse:
         url = urljoin(base_url, session_path + '/state')
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
-        resp = await self.session.get(url, headers=headers)
+        resp = await self.session.get(url, headers=self.headers)
         resp.raise_for_status()
         return StreamStateResponse.parse_obj(resp.json())
 
@@ -85,10 +81,7 @@ class XHomeStreamingApi:
         self, base_url: str, session_path: str
     ) -> StreamConfig:
         url = urljoin(base_url, session_path + '/configuration')
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
-        resp = await self.session.get(url, headers=headers)
+        resp = await self.session.get(url, headers=self.headers)
         resp.raise_for_status()
         return StreamConfig.parse_obj(resp.json())
 
@@ -96,13 +89,10 @@ class XHomeStreamingApi:
         self, base_url: str, ice_path: str, local_ice_config: str
     ) -> bool:
         url = urljoin(base_url, ice_path)
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
         json_body = {
             "candidates": local_ice_config
         }
-        resp = await self.session.post(url, json=json_body, headers=headers)
+        resp = await self.session.post(url, json=json_body, headers=self.headers)
         resp.raise_for_status()
         return resp.status_code == 202  # ACCEPTED
 
@@ -110,10 +100,7 @@ class XHomeStreamingApi:
         self, base_url: str, ice_path: str
     ) -> StreamICEConfig:
         url = urljoin(base_url, ice_path)
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
-        resp = await self.session.get(url, headers=headers)
+        resp = await self.session.get(url, headers=self.headers)
         resp.raise_for_status()
         return StreamICEConfig.parse_obj(resp.json())
 
@@ -121,10 +108,7 @@ class XHomeStreamingApi:
         self, base_url: str, session_path: str
     ) -> bool:
         url = urljoin(base_url, session_path)
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
-        resp = await self.session.delete(url, headers=headers)
+        resp = await self.session.delete(url, headers=self.headers)
         resp.raise_for_status()
         return resp.status_code == 202  # ACCEPTED
 

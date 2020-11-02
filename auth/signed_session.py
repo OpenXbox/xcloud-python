@@ -1,15 +1,15 @@
 """
 Signed Session
 
-A wrapper around httpx' AsyncClient which transparently calculates the "Signature" header.
+A wrapper around aiohttp's ClientSession which transparently calculates the "Signature" header.
 """
 
 import asyncio
-import httpx
+import aiohttp
 from auth.request_signer import RequestSigner
 
 
-class SignedSession(httpx.AsyncClient):
+class SignedSession(aiohttp.ClientSession):
     def __init__(self, request_signer=None):
         super().__init__()
         self.request_signer = request_signer or RequestSigner()
@@ -21,8 +21,8 @@ class SignedSession(httpx.AsyncClient):
 
     def _prepare_signed_request(
         self,
-        request: httpx.Request
-    ) -> httpx.Request:
+        request: aiohttp.ClientRequest
+    ) -> aiohttp.ClientRequest:
         path_and_query = request.url.raw_path.decode()
         authorization = request.headers.get('Authorization', '')
 
@@ -40,7 +40,7 @@ class SignedSession(httpx.AsyncClient):
         request.headers['Signature'] = signature
         return request
 
-    async def send_signed(self, request: httpx.Request) -> httpx.Response:
+    async def send_signed(self, request: aiohttp.ClientRequest) -> aiohttp.ClientRequest:
         """
         Shorthand for prepare signed + send
         """

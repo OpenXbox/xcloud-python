@@ -6,10 +6,9 @@ import logging
 import uuid
 import base64
 import hashlib
-import asyncio
-import httpx
+import aiohttp
 from urllib import parse
-from typing import Optional
+from typing import Optional, Tuple
 
 import ms_cv
 from auth.signed_session import SignedSession
@@ -78,7 +77,7 @@ class XalAuthenticator(object):
         # Base64 urlsafe encoding WITHOUT stripping trailing '='
         return base64.b64encode(state).decode()
 
-    async def _get_endpoints(self) -> httpx.Response:
+    async def _get_endpoints(self) -> aiohttp.ClientResponse:
         url = 'https://title.mgt.xboxlive.com/titles/default/endpoints'
         headers = {
             'x-xbl-contract-version': '1'
@@ -88,7 +87,7 @@ class XalAuthenticator(object):
         }
         return await self.session.get(url, headers=headers, params=params)
 
-    async def _get_device_token(self) -> httpx.Response:
+    async def _get_device_token(self) -> aiohttp.ClientResponse:
         # Proof of posession: https://tools.ietf.org/html/rfc7800
 
         client_uuid = str(self.client_id)
@@ -126,7 +125,7 @@ class XalAuthenticator(object):
         device_token_jwt: str,
         code_challenge: str,
         state: str
-    ) -> httpx.Response:
+    ) -> aiohttp.ClientResponse:
         url = 'https://sisu.xboxlive.com/authenticate'
         headers = {
             'x-xbl-contract-version': '1',
@@ -155,7 +154,7 @@ class XalAuthenticator(object):
 
     async def __oauth20_token_endpoint(
         self, json_body: dict
-    ) -> httpx.Response:
+    ) -> aiohttp.ClientResponse:
         url = 'https://login.live.com/oauth20_token.srf'
         headers = {
             'MS-CV': self.cv.increment()
@@ -171,7 +170,7 @@ class XalAuthenticator(object):
         self,
         authorization_code: str,
         code_verifier: str
-    ) -> httpx.Response:
+    ) -> aiohttp.ClientResponse:
         post_body = {
             'client_id': self.client_data.AppId,
             'code': authorization_code,
@@ -198,7 +197,7 @@ class XalAuthenticator(object):
         resp.raise_for_status()
         return XCloudTokenResponse.parse_obj(resp.json())
 
-    async def _refresh_token(self, refresh_token_jwt: str) -> httpx.Response:
+    async def _refresh_token(self, refresh_token_jwt: str) -> aiohttp.ClientResponse:
         post_body = {
             'client_id': self.client_data.AppId,
             'refresh_token': refresh_token_jwt,
@@ -214,7 +213,7 @@ class XalAuthenticator(object):
         sisu_session_id: str,
         access_token_jwt: str,
         device_token_jwt: str
-    ) -> httpx.Response:
+    ) -> aiohttp.ClientResponse:
         url = 'https://sisu.xboxlive.com/authorize'
         headers = {
             'MS-CV': self.cv.increment()
@@ -277,7 +276,7 @@ class XalAuthenticator(object):
         device_token: str,
         code_challenge: str,
         state: str
-    ) -> (SisuAuthenticationResponse, str):
+    ) -> Tuple[SisuAuthenticationResponse, str]:
         print('::: SISU AUTHENTICATION :::')
         resp = await self._do_sisu_authentication(device_token, code_challenge, state)
         assert resp.status_code == 200,\

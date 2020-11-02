@@ -2,7 +2,7 @@ import asyncio
 from urllib.parse import urljoin
 from typing import List
 
-import httpx
+import aiohttp
 import ms_cv
 
 from auth.models import XSTSResponse, XCloudTokenResponse
@@ -20,26 +20,28 @@ class XCloudApi:
         xcloud_token: XCloudTokenResponse,
         user_agent: str = USER_AGENT_ANDROID
     ):
-        self.session = httpx.AsyncClient()
-        self.session.headers.update({
-            'X-MS-Device-Info': user_agent,
-            'User-Agent': user_agent
-        })
-
+        self.session = aiohttp.ClientSession()
         self.cv = ms_cv.CorrelationVector()
+
+        self.user_agent = user_agent
         self.gssv_xsts_token = gssv_token
         self.xcloud_token = xcloud_token
 
-    async def _do_login(self) -> StreamLoginResponse:
-        url = 'https://publicpreview.gssv-play-prod.xboxlive.com/v2/login/user'
-        headers = {
+    @property
+    def headers(self):
+        return {
+            'X-MS-Device-Info': self.user_agent,
+            'User-Agent': self.user_agent,
             'MS-CV': self.cv.increment()
         }
+
+    async def _do_login(self) -> StreamLoginResponse:
+        url = 'https://publicpreview.gssv-play-prod.xboxlive.com/v2/login/user'
         post_body = {
             'offeringId': 'xgpubeta',
             'token': self.gssv_xsts_token.authorization_header_value
         }
-        resp = await self.session.post(url, headers=headers, json=post_body)
+        resp = await self.session.post(url, headers=self.headers, json=post_body)
         resp.raise_for_status()
         return StreamLoginResponse.parse_obj(resp.json())
 
@@ -50,16 +52,13 @@ class XCloudApi:
         continuation_token: str = None
     ) -> TitlesResponse:
         url = urljoin(base_url, '/v1/titles')
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
         query_params = {
             'mr': count
         }
         if continuation_token:
             query_params.update({'ct': continuation_token})
 
-        resp = await self.session.get(url, headers=headers, params=query_params)
+        resp = await self.session.get(url, headers=self.headers, params=query_params)
         resp.raise_for_status()
         return TitlesResponse.parse_obj(resp.json())
 
@@ -70,16 +69,13 @@ class XCloudApi:
         continuation_token: str = None
     ) -> TitlesResponse:
         url = urljoin(base_url, '/v1/titles/mru')
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
         query_params = {
             'mr': count
         }
         if continuation_token:
             query_params.update({'ct': continuation_token})
 
-        resp = await self.session.get(url, headers=headers, params=query_params)
+        resp = await self.session.get(url, headers=self.headers, params=query_params)
         resp.raise_for_status()
         return TitlesResponse.parse_obj(resp.json())
 
@@ -89,10 +85,7 @@ class XCloudApi:
         title_id: str
     ) -> TitleWaitTimeResponse:
         url = urljoin(base_url, f'/v1/waittime/{title_id}')
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
-        resp = await self.session.get(url, headers=headers)
+        resp = await self.session.get(url, headers=self.headers)
         resp.raise_for_status()
         return TitleWaitTimeResponse.parse_obj(resp.json())
 
@@ -100,9 +93,6 @@ class XCloudApi:
         self, base_url: str, title_id: str
     ) -> StreamSessionResponse:
         url = urljoin(base_url, '/v5/sessions/cloud/play')
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
         json_body = {
             "fallbackRegionNames": ["WestEurope", "UKSouth", "UKWest"],
             "serverId": "",
@@ -116,7 +106,7 @@ class XCloudApi:
             "systemUpdateGroup": "",
             "titleId": title_id
         }
-        resp = await self.session.post(url, json=json_body, headers=headers)
+        resp = await self.session.post(url, json=json_body, headers=self.headers)
         resp.raise_for_status()
         return StreamSessionResponse.parse_obj(resp.json())
 
@@ -124,10 +114,7 @@ class XCloudApi:
         self, base_url: str, session_path: str
     ) -> StreamStateResponse:
         url = urljoin(base_url, session_path + '/state')
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
-        resp = await self.session.get(url, headers=headers)
+        resp = await self.session.get(url, headers=self.headers)
         resp.raise_for_status()
         return StreamStateResponse.parse_obj(resp.json())
 
@@ -135,13 +122,10 @@ class XCloudApi:
         self, base_url: str, session_path: str, xcloud_token: str
     ) -> bool:
         url = urljoin(base_url, session_path + '/connect')
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
         json_body = {
             'userToken': xcloud_token
         }
-        resp = await self.session.post(url, json=json_body, headers=headers)
+        resp = await self.session.post(url, json=json_body, headers=self.headers)
         resp.raise_for_status()
         return resp.status_code == 202  # ACCEPTED
 
@@ -149,10 +133,7 @@ class XCloudApi:
         self, base_url: str, session_path: str
     ) -> StreamConfig:
         url = urljoin(base_url, session_path + '/configuration')
-        headers = {
-            'MS-CV': self.cv.increment()
-        }
-        resp = await self.session.get(url, headers=headers)
+        resp = await self.session.get(url, headers=self.headers)
         resp.raise_for_status()
         return StreamConfig.parse_obj(resp.json())
 
