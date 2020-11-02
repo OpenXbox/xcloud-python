@@ -281,9 +281,11 @@ class SmartglassApi:
 
     async def command_shell_activate_app_with_onestore_product_id(
         self,
-        console_live_id: str
+        console_live_id: str,
+        onestore_product_id: str
     ) -> CommandResponse:
-        return await self._send_command(console_live_id, "Shell", "ActivationApplicationWithOneStoreProductId")
+        params = [{"oneStoreProductId": onestore_product_id}]
+        return await self._send_command(console_live_id, "Shell", "ActivationApplicationWithOneStoreProductId", params)
 
     async def command_shell_allow_remote_management(
         self,
