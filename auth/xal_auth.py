@@ -117,8 +117,7 @@ class XalAuthenticator(object):
             }
         }
 
-        request = self.session.build_request('POST', url, headers=headers, json=post_body)
-        return await self.session.send_signed(request)
+        return await self.session.send_signed('POST', url, raise_for_status=False, headers=headers, json=post_body)
 
     async def _do_sisu_authentication(
         self,
@@ -149,8 +148,7 @@ class XalAuthenticator(object):
             }
         }
 
-        request = self.session.build_request('POST', url, headers=headers, json=post_body)
-        return await self.session.send_signed(request)
+        return await self.session.send_signed('POST', url, raise_for_status=False, headers=headers, json=post_body)
 
     async def __oauth20_token_endpoint(
         self, json_body: dict
@@ -161,10 +159,7 @@ class XalAuthenticator(object):
         }
 
         # NOTE: No signature necessary
-        request = self.session.build_request(
-            'POST', url, headers=headers, data=json_body
-        )
-        return await self.session.send(request)
+        return await self.session.request('POST', url, headers=headers, data=json_body)
 
     async def _exchange_code_for_token(
         self,
@@ -228,8 +223,7 @@ class XalAuthenticator(object):
             'ProofKey': self.session.request_signer.proof_field
         }
 
-        request = self.session.build_request('POST', url, headers=headers, json=post_body)
-        return await self.session.send_signed(request)
+        return await self.session.send_signed('POST', url, raise_for_status=False, headers=headers, json=post_body)
 
     async def xsts_authorization(
         self,
@@ -256,16 +250,14 @@ class XalAuthenticator(object):
             }
         }
 
-        request = self.session.build_request('POST', url, headers=headers, json=post_body)
-        resp = await self.session.send_signed(request)
-        resp.raise_for_status()
+        resp = await self.session.send_signed('POST', url, raise_for_status=False, headers=headers, json=post_body)
         return XSTSResponse.parse_obj(resp.json())
 
     async def device_auth(self) -> XADResponse:
         print('::: DEVICE TOKEN AUTHENTICATION :::')
         resp = await self._get_device_token()
-        assert resp.status_code == 200,\
-            f'Invalid response for GET_DEVICE_TOKEN: {resp.status_code}'
+        assert resp.status == 200,\
+            f'Invalid response for GET_DEVICE_TOKEN: {resp.status}'
 
         resp = XADResponse.parse_raw(resp.content)
         print(f'Device Token: {resp.Token}')
@@ -279,8 +271,8 @@ class XalAuthenticator(object):
     ) -> Tuple[SisuAuthenticationResponse, str]:
         print('::: SISU AUTHENTICATION :::')
         resp = await self._do_sisu_authentication(device_token, code_challenge, state)
-        assert resp.status_code == 200,\
-            f'Invalid response for DO_SISU_AUTHENTICATION: {resp.status_code}'
+        assert resp.status == 200,\
+            f'Invalid response for DO_SISU_AUTHENTICATION: {resp.status}'
 
         session_id = resp.headers['X-SessionId']
         print('SISU Session Id: {}'.format(session_id))
@@ -320,8 +312,8 @@ class XalAuthenticator(object):
             return None
 
         tokens = await self._exchange_code_for_token(resp_authorization_code, code_verifier)
-        assert tokens.status_code == 200,\
-            f'Invalid response for EXCHANGE_CODE_FOR_TOKENS: {tokens.status_code}'
+        assert tokens.status == 200,\
+            f'Invalid response for EXCHANGE_CODE_FOR_TOKENS: {tokens.status}'
         tokens = WindowsLiveTokenResponse.parse_raw(tokens.content)
 
         print('::: SISU AUTHORIZATION :::')
@@ -330,7 +322,7 @@ class XalAuthenticator(object):
             tokens.access_token,
             device_token_resp.Token
         )
-        assert sisu_authorization.status_code == 200, 'Invalid response for DO_SISU_AUTHORIZATION'
+        assert sisu_authorization.status == 200, 'Invalid response for DO_SISU_AUTHORIZATION'
 
         sisu_authorization_resp = SisuAuthorizationResponse.parse_raw(
             sisu_authorization.content

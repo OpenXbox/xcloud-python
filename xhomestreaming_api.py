@@ -94,7 +94,7 @@ class XHomeStreamingApi:
         }
         resp = await self.session.post(url, json=json_body, headers=self.headers)
         resp.raise_for_status()
-        return resp.status_code == 202  # ACCEPTED
+        return resp.status == 202  # ACCEPTED
 
     async def _get_ice(
         self, base_url: str, ice_path: str
@@ -110,7 +110,7 @@ class XHomeStreamingApi:
         url = urljoin(base_url, session_path)
         resp = await self.session.delete(url, headers=self.headers)
         resp.raise_for_status()
-        return resp.status_code == 202  # ACCEPTED
+        return resp.status == 202  # ACCEPTED
 
     async def _handle_ice_negotiation(
         self, base_url: str, ice_exchange_path: str

@@ -6,6 +6,7 @@ A wrapper around aiohttp's ClientSession which transparently calculates the "Sig
 
 import asyncio
 import aiohttp
+from yarl import URL
 from auth.request_signer import RequestSigner
 
 
@@ -23,7 +24,7 @@ class SignedSession(aiohttp.ClientSession):
         self,
         request: aiohttp.ClientRequest
     ) -> aiohttp.ClientRequest:
-        path_and_query = request.url.raw_path.decode()
+        path_and_query = request.url.raw_path
         authorization = request.headers.get('Authorization', '')
 
         body = b''
@@ -40,9 +41,16 @@ class SignedSession(aiohttp.ClientSession):
         request.headers['Signature'] = signature
         return request
 
-    async def send_signed(self, request: aiohttp.ClientRequest) -> aiohttp.ClientRequest:
+    async def send_signed(
+        self, method: str, url: URL, raise_for_status=True, *args, **kwargs
+    ) -> aiohttp.ClientResponse:
         """
         Shorthand for prepare signed + send
         """
-        prepared = self._prepare_signed_request(request)
-        return await self.send(prepared)
+        # FIXME!
+        #prepared = self._prepare_signed_request(request)
+        #return await prepared.send(self.connector)
+        resp = await self.request(method, url, **kwargs)
+        if raise_for_status:
+            resp.raise_for_status()
+        return resp

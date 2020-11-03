@@ -127,7 +127,7 @@ class XCloudApi:
         }
         resp = await self.session.post(url, json=json_body, headers=self.headers)
         resp.raise_for_status()
-        return resp.status_code == 202  # ACCEPTED
+        return resp.status == 202  # ACCEPTED
 
     async def _get_stream_config(
         self, base_url: str, session_path: str

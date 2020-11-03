@@ -52,16 +52,12 @@ class SmartglassApi:
             'x-xbl-opId': operation_id,
             'x-xbl-deviceId': device_id
         })
-        request = self.session.build_request('GET', url, headers=self.headers)
-        resp = await self.session.send_signed(request)
-        resp.raise_for_status()
+        resp = await self.session.send_signed('GET', url, headers=self.headers)
         return OperationStatusResponse.parse_obj(resp.json())
 
     async def _fetchList(self, list_name: str, query_params: dict = None) -> aiohttp.ClientResponse:
         url = urljoin(self.BASE_URL, f'/lists/{list_name}')
-        request = self.session.build_request('GET', url, headers=self.headers, params=query_params)
-        resp = await self.session.send_signed(request)
-        resp.raise_for_status()
+        resp = await self.session.send_signed('GET', url, headers=self.headers, params=query_params)
         return resp
 
     async def get_console_list(self) -> SmartglassConsoleList:
@@ -88,9 +84,7 @@ class SmartglassApi:
 
     async def get_console_status(self, console_live_id: str) -> SmartglassConsoleStatus:
         url = urljoin(self.BASE_URL, f'/consoles/{console_live_id}')
-        request = self.session.build_request('GET', url, headers=self.headers)
-        resp = await self.session.send_signed(request)
-        resp.raise_for_status()
+        resp = await self.session.send_signed('GET', url, headers=self.headers)
         return SmartglassConsoleStatus.parse_obj(resp.json())
 
     async def _send_command(
@@ -113,9 +107,7 @@ class SmartglassApi:
             "parameters": parameters,
             "linkedXboxId": console_liveid
         }
-        request = self.session.build_request('POST', url, headers=self.headers, json=json_body)
-        resp = await self.session.send_signed(request)
-        resp.raise_for_status()
+        resp = await self.session.send_signed('POST', url, headers=self.headers, json=json_body)
         return CommandResponse.parse_obj(resp.json())
 
     async def command_power_on(self, console_live_id: str) -> CommandResponse:
