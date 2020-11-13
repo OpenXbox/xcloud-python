@@ -62,11 +62,11 @@ async def test_xhome_streaming(
         config.Authorization.UserToken.Token,
         relying_party='http://gssv.xboxlive.com/'
     )
-    await xal.session.aclose()
+    await xal.session.close()
 
     xhome_api = XHomeStreamingApi(gssv_token)
     await xhome_api.start_streaming(console_liveid)
-    await xhome_api.session.aclose()
+    await xhome_api.session.close()
 
 
 async def test_xcloud_streaming(
@@ -89,11 +89,11 @@ async def test_xcloud_streaming(
     xcloud_token = await xal.exchange_refresh_token_for_xcloud_transfer_token(
         config.WindowsLiveTokens.refresh_token
     )
-    await xal.session.aclose()
+    await xal.session.close()
 
     xhome_api = XCloudApi(gssv_token, xcloud_token)
     await xhome_api.start_streaming()
-    await xhome_api.session.aclose()
+    await xhome_api.session.close()
 
 
 async def main(command: str):
@@ -134,7 +134,14 @@ async def main(command: str):
         xal = XalAuthenticator(
             config.ClientUUID, config.XalParameters, request_signer
         )
-        await xal.auth_flow()
+        try:
+            await xal.auth_flow()
+        except AssertionError as e:
+            print(f'Authentication failed: {e}')
+            await xal.session.close()
+            sys.exit(1)
+
+        await xal.session.close()
 
         config.WindowsLiveTokens = xal.windows_live_tokens
         config.Authorization = xal.sisu_authorization_tokens
@@ -152,8 +159,14 @@ async def main(command: str):
         )
 
         print(':: Getting console list')
-        console_list = await smartglass.get_console_list()
-        await smartglass.session.aclose()
+        try:
+            console_list = await smartglass.get_console_list()
+        except Exception as e:
+            print('Failed to get Smartglass console list: {e}')
+            await smartglass.session.close()
+            sys.exit(2)
+        
+        await smartglass.session.close()
 
         console = choose_console(console_list)
         console_liveid = console.id

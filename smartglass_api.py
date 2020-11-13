@@ -40,97 +40,6 @@ class SmartglassApi:
             'MS-CV': self.cv.increment()
         }
 
-    async def fetch_operation_status(
-        self,
-        operation_id: str,
-        device_id: str
-    ) -> OperationStatusResponse:
-        url = urljoin(self.BASE_URL, '/opStatus')
-        headers = self.headers.copy()
-        headers.update({
-            'x-xbl-contract-version': '3',
-            'x-xbl-opId': operation_id,
-            'x-xbl-deviceId': device_id
-        })
-        resp = await self.session.send_signed('GET', url, headers=self.headers)
-        return OperationStatusResponse.parse_obj(resp.json())
-
-    async def _fetchList(self, list_name: str, query_params: dict = None) -> aiohttp.ClientResponse:
-        url = urljoin(self.BASE_URL, f'/lists/{list_name}')
-        resp = await self.session.send_signed('GET', url, headers=self.headers, params=query_params)
-        return resp
-
-    async def get_console_list(self) -> SmartglassConsoleList:
-        query_params = {
-            'queryCurrentDevice': 'false',
-            'includeStorageDevices': 'true'
-        }
-        resp = await self._fetchList("devices", query_params)
-        return SmartglassConsoleList.parse_obj(resp.json())
-
-    async def get_storage_devices(self, device_id: str) -> StorageDevicesList:
-        query_params = {
-            'deviceId': device_id
-        }
-        resp = await self._fetchList("storageDevices", query_params)
-        return StorageDevicesList.parse_obj(resp.json())
-
-    async def get_installed_apps(self, device_id: str) -> InstalledPackagesList:
-        query_params = {
-            'deviceId': device_id
-        }
-        resp = await self._fetchList("installedApps", query_params)
-        return InstalledPackagesList.parse_obj(resp.json())
-
-    async def get_console_status(self, console_live_id: str) -> SmartglassConsoleStatus:
-        url = urljoin(self.BASE_URL, f'/consoles/{console_live_id}')
-        resp = await self.session.send_signed('GET', url, headers=self.headers)
-        return SmartglassConsoleStatus.parse_obj(resp.json())
-
-    async def _send_command(
-        self,
-        console_liveid: str,
-        command_type: str,
-        command: str,
-        parameters: Optional[list] = None
-    ) -> CommandResponse:
-        if not parameters:
-            parameters = [{}]
-
-        url = urljoin(self.BASE_URL, '/commands')
-        json_body = {
-            "destination": "Xbox",
-            "type": command_type,
-            "command": command,
-            "sessionId": self.smartglass_session_id,
-            "sourceId": "com.microsoft.smartglass",
-            "parameters": parameters,
-            "linkedXboxId": console_liveid
-        }
-        resp = await self.session.send_signed('POST', url, headers=self.headers, json=json_body)
-        return CommandResponse.parse_obj(resp.json())
-
-    async def command_power_on(self, console_live_id: str) -> CommandResponse:
-        return await self._send_command(console_live_id, "Power", "WakeUp")
-
-    async def command_power_off(self, console_live_id: str) -> CommandResponse:
-        return await self._send_command(console_live_id, "Power", "TurnOff")
-
-    async def command_power_reboot(self, console_live_id: str) -> CommandResponse:
-        return await self._send_command(console_live_id, "Power", "Reboot")
-
-    async def command_audio_mute(self, console_live_id: str) -> CommandResponse:
-        return await self._send_command(console_live_id, "Audio", "Mute")
-
-    async def command_audio_unmute(self, console_live_id: str) -> CommandResponse:
-        return await self._send_command(console_live_id, "Audio", "Unmute")
-
-    async def command_audio_volume(
-        self, console_live_id: str, direction: VolumeDirection, amount: int = 1
-    ) -> CommandResponse:
-        params = [{"direction": direction.value, "amount": str(amount)}]
-        return await self._send_command(console_live_id, "Audio", "Volume", params)
-
     async def command_config_digital_assistant_remote_control(
         self,
         console_live_id: str
@@ -142,7 +51,7 @@ class SmartglassApi:
         console_live_id: str,
         enable: bool
     ) -> CommandResponse:
-        params = [{"enabled": str(enable)}]
+        params = [{"enabled": str(enable).capitalize()}]
         return await self._send_command(console_live_id, "Config", "RemoteAccess", params)
 
     async def command_config_allow_console_streaming(
@@ -150,7 +59,7 @@ class SmartglassApi:
         console_live_id: str,
         enable: bool
     ) -> CommandResponse:
-        params = [{"enabled": str(enable)}]
+        params = [{"enabled": str(enable).capitalize()}]
         return await self._send_command(console_live_id, "Config", "AllowConsoleStreaming", params)
 
     async def command_game_capture_gameclip(
@@ -249,13 +158,6 @@ class SmartglassApi:
     ) -> CommandResponse:
         return await self._send_command(console_live_id, "Marketplace", "ShowTitle")
 
-    async def command_media(
-        self,
-        console_live_id: str,
-        media_command: MediaCommand
-    ) -> CommandResponse:
-        return await self._send_command(console_live_id, "Media", media_command.value)
-
     async def command_shell_activate_app_with_uri(
         self,
         console_live_id: str
@@ -267,14 +169,6 @@ class SmartglassApi:
         console_live_id: str
     ) -> CommandResponse:
         return await self._send_command(console_live_id, "Shell", "ActivateApplicationWithAumid")
-
-    async def command_shell_activate_app_with_onestore_product_id(
-        self,
-        console_live_id: str,
-        onestore_product_id: str
-    ) -> CommandResponse:
-        params = [{"oneStoreProductId": onestore_product_id}]
-        return await self._send_command(console_live_id, "Shell", "ActivationApplicationWithOneStoreProductId", params)
 
     async def command_shell_allow_remote_management(
         self,
@@ -334,18 +228,6 @@ class SmartglassApi:
     ) -> CommandResponse:
         return await self._send_command(console_live_id, "Shell", "EjectDisk")
 
-    async def command_shell_go_back(
-        self,
-        console_live_id: str
-    ) -> CommandResponse:
-        return await self._send_command(console_live_id, "Shell", "GoBack")
-
-    async def command_shell_go_home(
-        self,
-        console_live_id: str
-    ) -> CommandResponse:
-        return await self._send_command(console_live_id, "Shell", "GoHome")
-
     async def command_shell_pair_controller(
         self,
         console_live_id: str
@@ -357,12 +239,6 @@ class SmartglassApi:
         console_live_id: str
     ) -> CommandResponse:
         return await self._send_command(console_live_id, "Shell", "SendTextMessage")
-
-    async def command_shell_show_guide_tab(
-        self,
-        console_live_id: str
-    ) -> CommandResponse:
-        return await self._send_command(console_live_id, "Shell", "ShowGuideTab")
 
     async def command_shell_sign_in(
         self,
@@ -387,24 +263,6 @@ class SmartglassApi:
         console_live_id: str
     ) -> CommandResponse:
         return await self._send_command(console_live_id, "Shell", "TerminateApplication")
-
-    async def command_shell_keyinput(
-        self, console_live_id: str, key_type: InputKeyType
-    ) -> CommandResponse:
-        params = [{"keyType": key_type.value}]
-        return await self._send_command(console_live_id, "Shell", "InjectKey", params)
-
-    async def command_shell_textinput(
-        self, console_live_id: str, text_input: str
-    ) -> CommandResponse:
-        params = [{"replacementString": text_input}]
-        return await self._send_command(console_live_id, "Shell", "InjectString", params)
-
-    async def command_tv_show_guide(
-        self,
-        console_live_id: str
-    ) -> CommandResponse:
-        return await self._send_command(console_live_id, "TV", "ShowGuide")
 
     async def command_tv_watch_channel(
         self,
