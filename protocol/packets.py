@@ -48,6 +48,9 @@ video_data = Struct(
     'data' / Bytes(this.data_size)
 )
 
+class QosControlFlags:
+    REINITIALIZE = 0x1
+
 qos_server_policy = Struct(
     'schema_version' / Int32ul,
     'policy_length' / Int32ul,
@@ -60,3 +63,23 @@ qos_server_handshake = Struct(
     'protocol_version' / Int32ul,
     'min_supported_client_version' / Int32ul
 )
+
+qos_client_policy = Struct(
+    'schema_version' / Int32ul
+)
+
+qos_client_handshake = Struct(
+    'protocol_version' / Int32ul,
+    'initial_frame_id' / Int32ul
+)
+
+qos_control = Struct(
+    'flags' / Int32ul
+)
+
+qos_data = Struct(
+    'flags' / Int32ul,
+    'frame_id' / Int32ul,
+    # TBD
+)
+
