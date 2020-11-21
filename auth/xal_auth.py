@@ -6,10 +6,11 @@ import logging
 import uuid
 import base64
 import hashlib
+import json
 import asyncio
 import httpx
 from urllib import parse
-from typing import Optional
+from typing import Optional, Tuple
 
 import ms_cv
 from auth.signed_session import SignedSession
@@ -119,6 +120,58 @@ class XalAuthenticator(object):
         }
 
         request = self.session.build_request('POST', url, headers=headers, json=post_body)
+        return await self.session.send_signed(request)
+
+    async def _get_title_token(
+        self, device_token: str, access_token: str
+    ) -> httpx.Response:
+        url = "https://title.auth.xboxlive.com/title/authenticate"
+        headers = {"x-xbl-contract-version": "1", "MS-CV": self.cv.increment()}
+        post_body = {
+            "RelyingParty": "http://auth.xboxlive.com",
+            "TokenType": "JWT",
+            "Properties": {
+                "AuthMethod": "RPS",
+                "DeviceToken": device_token,
+                "RpsTicket": f"t={access_token}",
+                "SiteName": "user.auth.xboxlive.com",
+            },
+        }
+
+        request = self.session.build_request(
+            "POST", url, headers=headers, json=post_body
+        )
+        return await self.session.send_signed(request)
+
+    async def get_title_token2(
+        self,
+        device_token: str,
+        title_id: str = "49312658",
+        title_version: str = "10.0.10011.16384",
+        title_build: str = "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF",
+        title_content_id: str = "73DE1908-F71B-4C5C-821E-ED00A426E221",
+    ) -> httpx.Response:
+        url = "https://title.auth.xboxlive.com/title/authenticate"
+        headers = {"x-xbl-contract-version": "1", "MS-CV": self.cv.increment()}
+        post_body = {
+            "RelyingParty": "http://auth.xboxlive.com",
+            "TokenType": "JWT",
+            "Properties": {
+                "DeviceToken": device_token,
+                "TitleAttestation": json.dumps(
+                    {
+                        "Id": title_id,
+                        "Version": title_version,
+                        "Build": title_build,
+                        "ContentId": title_content_id,
+                    }
+                ),
+            },
+        }
+
+        request = self.session.build_request(
+            "POST", url, headers=headers, json=post_body
+        )
         return await self.session.send_signed(request)
 
     async def _do_sisu_authentication(
@@ -277,7 +330,7 @@ class XalAuthenticator(object):
         device_token: str,
         code_challenge: str,
         state: str
-    ) -> (SisuAuthenticationResponse, str):
+    ) -> Tuple[SisuAuthenticationResponse, str]:
         print('::: SISU AUTHENTICATION :::')
         resp = await self._do_sisu_authentication(device_token, code_challenge, state)
         assert resp.status_code == 200,\
