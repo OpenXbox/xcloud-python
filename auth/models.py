@@ -88,10 +88,10 @@ class XCloudTokenResponse(BaseModel):
 
 
 class XalClientParameters(BaseModel):
-    UserAgent: XalUserAgents
-    AppId: XalAppId
-    DeviceType: XalDeviceType
+    UserAgent: str
+    AppId: str
+    DeviceType: str
     ClientVersion: str
-    TitleId: XalTitleId
-    RedirectUri: XalRedirectUri
-    QueryDisplay: XalQueryDisplay
+    TitleId: str
+    RedirectUri: str
+    QueryDisplay: str
