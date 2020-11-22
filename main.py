@@ -102,17 +102,17 @@ async def main(command: str):
     """
 
     if command == 'xhome' or command == 'smartglass':
-        app_config = APP_CONFIG_XBOXBETA_FILE
+        app_config_file = APP_CONFIG_XBOXBETA_FILE
         xal_params = IOS_XBOXBETA_APP_PARAMS
     elif command == 'xcloud':
-        app_config = APP_CONFIG_XBOXGAMEPASS_FILE
+        app_config_file = APP_CONFIG_XBOXGAMEPASS_FILE
         xal_params = ANDROID_GAMEPASS_BETA_PARAMS
     else:
         print(':: Unexpected command...')
         return
 
     try:
-        config = AppConfiguration.parse_file(app_config)
+        config = AppConfiguration.parse_file(app_config_file)
     except Exception as e:
         print(f'Failed to parse app configuration! Err: {e}')
         print('Initializing new config...')
@@ -142,7 +142,7 @@ async def main(command: str):
     """
     Saving app config
     """
-    with io.open(app_config, 'wt') as f:
+    with io.open(app_config_file, 'wt') as f:
         f.write(config.json(indent=2))
 
     if command == 'smartglass' or command == 'xhome':
