@@ -24,5 +24,10 @@ setup(
         "aiortc",
         "construct",
         "dpkt"
-    ]
+    ],
+    setup_requires=[
+        "wheel",
+        "pytest-runner"
+    ],
+    tests_require=["pytest"]
 )

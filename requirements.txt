@@ -5,3 +5,7 @@ httpx
 aiortc
 construct
 dpkt
+
+wheel
+pytest-runner
+pytest
