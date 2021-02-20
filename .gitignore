@@ -12,6 +12,7 @@ venv/
 appconfig*
 
 # Python build artifacts
+.eggs/
 *.egg-info/
 build/
 dist/
