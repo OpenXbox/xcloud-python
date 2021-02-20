@@ -1,0 +1,15 @@
+{
+    "ClientUUID": "78af29d1-7572-4861-9ce2-1cd99830b9e7",
+    "XalParameters": {
+      "UserAgent": "XAL iOS 2020.07.20200714.000",
+      "AppId": "000000004415494b",
+      "DeviceType": "iOS",
+      "ClientVersion": "14.0.1",
+      "TitleId": "177887386",
+      "RedirectUri": "ms-xal-000000004415494b://auth",
+      "QueryDisplay": "ios_phone"
+    },
+    "WindowsLiveTokens": null,
+    "Authorization": null,
+    "SigningKey": "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEICQAlg6DMIbN8tugevQ0s50BbDLzvQ9DVKOw3BUKrWi1oAoGCCqGSM49\nAwEHoUQDQgAEHTLC5OYTHLLRYAM0yCcacB6f79DlcXvhJjBLwKJYFPDQ/Ab+D9DY\nahRqpFyqUGDmMnQxImptfr6tI9NJ7g6hjg==\n-----END EC PRIVATE KEY-----\n"
+  }
