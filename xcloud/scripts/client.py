@@ -7,7 +7,7 @@ import asyncio
 from ..common import AppConfiguration
 
 from ..auth.constants import IOS_XBOXBETA_APP_PARAMS, ANDROID_GAMEPASS_BETA_PARAMS
-from ..auth.models import XalClientParameters, XSTSResponse
+from ..auth.models import XalClientParameters
 from ..auth.xal_auth import XalAuthenticator
 from ..auth.request_signer import RequestSigner
 
@@ -17,6 +17,7 @@ from ..xhomestreaming_api import XHomeStreamingApi
 
 APP_CONFIG_XBOXBETA_FILE = "appconfig.xboxbeta.json"
 APP_CONFIG_XBOXGAMEPASS_FILE = "appconfig.xboxgamepass.json"
+
 
 def choose_console(console_list):
     print('Please choose a console:')
@@ -165,6 +166,7 @@ async def async_main(command: str):
     elif command == 'xcloud':
         await test_xcloud_streaming(config)
 
+
 def main():
     if len(sys.argv) < 2:
         print(':: Please provide a command! Choices: smartglass, xhome, xcloud')
@@ -176,6 +178,7 @@ def main():
         sys.exit(2)
 
     asyncio.run(async_main(command))
+
 
 if __name__ == '__main__':
     main()

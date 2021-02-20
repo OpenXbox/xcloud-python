@@ -12,8 +12,16 @@ from .ice import ICEHandler
 from .streaming_models import StreamLoginResponse, StreamSessionResponse, \
     StreamStateResponse, StreamConfig, StreamICEConfig
 
-USER_AGENT_IOS = '{"conn":{"cell":{"carrier":"","mcc":"","mnc":"","networkDetail":"","roaming":"Unknown","strengthPct":-1},"type":"Wifi","wifi":{"freq":-2147483648,"strengthDbm":-2147483648,"strengthPct":-1}},"dev":{"hw":{"make":"Apple","model":"iPad6,11"},"os":{"name":"iOS","ver":"14.0.1 (Build 18A393)"}}}'
-USER_AGENT_ANDROID = '{"conn":{"cell":{"carrier":"","mcc":"unknown","mnc":"unknown","strengthPct":0},"type":"Wifi","wifi":{"freq":2417,"strengthDbm":-47,"strengthPct":100}},"dev":{"hw":{"make":"amzn","model":"Fire"},"os":{"name":"Android","ver":"7.1.2-NJH47F-25"}}}'
+USER_AGENT_IOS = (
+    '{"conn":{"cell":{"carrier":"","mcc":"","mnc":"","networkDetail":"","roaming":"Unknown","strengthPct":-1},'
+    '"type":"Wifi","wifi":{"freq":-2147483648,"strengthDbm":-2147483648,"strengthPct":-1}},"dev":{"hw":{"make"'
+    ':"Apple","model":"iPad6,11"},"os":{"name":"iOS","ver":"14.0.1 (Build 18A393)"}}}'
+)
+USER_AGENT_ANDROID = (
+    '{"conn":{"cell":{"carrier":"","mcc":"unknown","mnc":"unknown","strengthPct":0},"type":"Wifi","wifi":{"freq":'
+    '2417,"strengthDbm":-47,"strengthPct":100}},"dev":{"hw":{"make":"amzn","model":"Fire"},"os":{"name":"Android",'
+    '"ver":"7.1.2-NJH47F-25"}}}'
+)
 
 
 class XHomeStreamingApi:
@@ -205,5 +213,3 @@ class XHomeStreamingApi:
 
         print(':: Closing stream again')
         await self._stop_stream(base_url, stream_session_info.sessionPath)
-
-

@@ -1,10 +1,9 @@
-import asyncio
 import httpx
 import uuid
-from typing import Optional, Union, List
+from typing import Optional, List
 
 import ms_cv
-from .auth.models import SisuAuthorizationResponse, XSTSResponse
+from .auth.models import XSTSResponse
 from .auth.signed_session import SignedSession
 from .auth.request_signer import RequestSigner
 
@@ -39,7 +38,7 @@ class SmartglassApi:
         operation_id: str,
         device_id: str
     ) -> OperationStatusResponse:
-        url = f'https://xccs.xboxlive.com/opStatus'
+        url = 'https://xccs.xboxlive.com/opStatus'
         headers = {
             'MS-CV': self.cv.increment(),
             'x-xbl-contract-version': '3',
@@ -103,7 +102,7 @@ class SmartglassApi:
         if not parameters:
             parameters = [{}]
 
-        url = f'https://xccs.xboxlive.com/commands'
+        url = 'https://xccs.xboxlive.com/commands'
         headers = {
             'MS-CV': self.cv.increment()
         }

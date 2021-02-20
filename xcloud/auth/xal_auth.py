@@ -7,7 +7,6 @@ import uuid
 import base64
 import hashlib
 import json
-import asyncio
 import httpx
 from urllib import parse
 from typing import Optional, Tuple
