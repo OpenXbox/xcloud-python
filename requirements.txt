@@ -7,5 +7,6 @@ construct
 dpkt
 
 wheel
+flake8
 pytest-runner
 pytest
