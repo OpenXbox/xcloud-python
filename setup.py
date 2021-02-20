@@ -10,7 +10,12 @@ setup(
     author_email='noreply@openxbox.org',
     url='https://github.com/OpenXbox/xcloud-python',
     packages=find_packages(),
-    entry_points={'console_scripts': ['xcloud-pcap-reader=xcloud.scripts.pcap_reader:main']},
+    entry_points={
+        'console_scripts': [
+            'xcloud-pcap-reader=xcloud.scripts.pcap_reader:main',
+            'xcloud-client=xcloud.scripts.client:main'
+        ]
+    },
     install_requires=[
         "ecdsa",
         "ms_cv",

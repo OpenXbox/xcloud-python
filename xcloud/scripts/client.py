@@ -4,16 +4,16 @@ import uuid
 import time
 import asyncio
 
-from .common import AppConfiguration
+from ..common import AppConfiguration
 
-from .auth.constants import IOS_XBOXBETA_APP_PARAMS, ANDROID_GAMEPASS_BETA_PARAMS
-from .auth.models import XalClientParameters, XSTSResponse
-from .auth.xal_auth import XalAuthenticator
-from .auth.request_signer import RequestSigner
+from ..auth.constants import IOS_XBOXBETA_APP_PARAMS, ANDROID_GAMEPASS_BETA_PARAMS
+from ..auth.models import XalClientParameters, XSTSResponse
+from ..auth.xal_auth import XalAuthenticator
+from ..auth.request_signer import RequestSigner
 
-from .smartglass_api import SmartglassApi
-from .xcloud_api import XCloudApi
-from .xhomestreaming_api import XHomeStreamingApi
+from ..smartglass_api import SmartglassApi
+from ..xcloud_api import XCloudApi
+from ..xhomestreaming_api import XHomeStreamingApi
 
 APP_CONFIG_XBOXBETA_FILE = "appconfig.xboxbeta.json"
 APP_CONFIG_XBOXGAMEPASS_FILE = "appconfig.xboxgamepass.json"
@@ -96,7 +96,7 @@ async def test_xcloud_streaming(
     await xhome_api.session.aclose()
 
 
-async def main(command: str):
+async def async_main(command: str):
     """
     Prepare needed values
     """
@@ -165,8 +165,7 @@ async def main(command: str):
     elif command == 'xcloud':
         await test_xcloud_streaming(config)
 
-
-if __name__ == '__main__':
+def main():
     if len(sys.argv) < 2:
         print(':: Please provide a command! Choices: smartglass, xhome, xcloud')
         sys.exit(1)
@@ -176,4 +175,7 @@ if __name__ == '__main__':
         print(':: You provided an invalid command!')
         sys.exit(2)
 
-    asyncio.run(main(command))
+    asyncio.run(async_main(command))
+
+if __name__ == '__main__':
+    main()
