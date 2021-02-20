@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Dict, List, Optional
-from auth.constants import XalAppId, XalTitleId, XalRedirectUri,\
+from .constants import XalAppId, XalTitleId, XalRedirectUri,\
     XalQueryDisplay, XalDeviceType, XalUserAgents
 
 

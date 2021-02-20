@@ -4,16 +4,16 @@ import uuid
 import time
 import asyncio
 
-from common import AppConfiguration
+from .common import AppConfiguration
 
-from auth.constants import IOS_XBOXBETA_APP_PARAMS, ANDROID_GAMEPASS_BETA_PARAMS
-from auth.models import XalClientParameters, XSTSResponse
-from auth.xal_auth import XalAuthenticator
-from auth.request_signer import RequestSigner
+from .auth.constants import IOS_XBOXBETA_APP_PARAMS, ANDROID_GAMEPASS_BETA_PARAMS
+from .auth.models import XalClientParameters, XSTSResponse
+from .auth.xal_auth import XalAuthenticator
+from .auth.request_signer import RequestSigner
 
-from smartglass_api import SmartglassApi
-from xcloud_api import XCloudApi
-from xhomestreaming_api import XHomeStreamingApi
+from .smartglass_api import SmartglassApi
+from .xcloud_api import XCloudApi
+from .xhomestreaming_api import XHomeStreamingApi
 
 APP_CONFIG_XBOXBETA_FILE = "appconfig.xboxbeta.json"
 APP_CONFIG_XBOXGAMEPASS_FILE = "appconfig.xboxgamepass.json"

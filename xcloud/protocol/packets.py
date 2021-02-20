@@ -1,4 +1,21 @@
+from enum import Enum
 from construct import Struct, this, Int32ul, Int64ul, PrefixedArray, Bytes, Array
+
+"""
+Payload types
+"""
+class PayloadType(Enum):
+    MuxDCTChannelRangeDefault = 0x23
+    MuxDCTChannelRangeEnd = 0x3f
+    BaseLinkControl = 0x60
+    MuxDCTControl = 0x61
+    FECControl = 0x62
+    SecurityLayerCtrl = 0x63
+    URCPControl = 0x64
+    UDPKeepAlive = 0x65
+    UDPConnectionProbing = 0x66
+    URCPDummyPacket = 0x68
+    MockUDPDctCtrl = 0x7f
 
 """
 Video Channel
@@ -83,3 +100,12 @@ qos_data = Struct(
     # TBD
 )
 
+"""
+Control Protocol
+"""
+class ControlProtocolMessageOpCode(Enum):
+    Auth = 0x1
+    AuthComplete = 0x2
+    Config = 0x3
+    ControllerChange = 0x4
+    Config2 = 0x6

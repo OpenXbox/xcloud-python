@@ -7,9 +7,9 @@ import base64
 import hashlib
 import struct
 from datetime import datetime
-
-from auth import filetimes
 from ecdsa import SigningKey, NIST256p
+
+from . import filetimes
 
 
 class RequestSigner:
