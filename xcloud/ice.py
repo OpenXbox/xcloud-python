@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 
 from aiortc import (
@@ -78,7 +78,9 @@ class ICEHandler:
         return ice_config
 
     @staticmethod
-    def parse_remote_config(ice_config: dict) -> (List[RTCIceCandidate], RTCIceParameters):
+    def parse_remote_config(
+        ice_config: dict
+    ) -> Tuple[List[RTCIceCandidate], RTCIceParameters]:
         candidate_nodes: dict = ice_config.get('Candidates')
         if not candidate_nodes:
             raise Exception(

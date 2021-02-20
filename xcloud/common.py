@@ -1,7 +1,7 @@
 from typing import Optional
 
 from pydantic import BaseModel, UUID4
-from auth.models import SisuAuthorizationResponse, WindowsLiveTokenResponse,\
+from .auth.models import SisuAuthorizationResponse, WindowsLiveTokenResponse,\
     XalClientParameters
 
 

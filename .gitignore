@@ -6,5 +6,12 @@ __pycache__
 .vscode/
 .idea/
 venv/
+.venv/
+.env/
 
 appconfig*
+
+# Python build artifacts
+*.egg-info/
+build/
+dist/

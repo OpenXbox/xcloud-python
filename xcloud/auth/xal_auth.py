@@ -13,12 +13,12 @@ from urllib import parse
 from typing import Optional, Tuple
 
 import ms_cv
-from auth.signed_session import SignedSession
-from auth.request_signer import RequestSigner
-from auth.models import SisuAuthenticationResponse, SisuAuthorizationResponse, \
+from .signed_session import SignedSession
+from .request_signer import RequestSigner
+from .models import SisuAuthenticationResponse, SisuAuthorizationResponse, \
     WindowsLiveTokenResponse, XADResponse, XalClientParameters, XSTSResponse, \
     XCloudTokenResponse
-from auth.constants import XalDeviceType
+from .constants import XalDeviceType
 
 log = logging.getLogger('auth')
 

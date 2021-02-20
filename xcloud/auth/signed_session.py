@@ -6,7 +6,7 @@ A wrapper around httpx' AsyncClient which transparently calculates the "Signatur
 
 import asyncio
 import httpx
-from auth.request_signer import RequestSigner
+from .request_signer import RequestSigner
 
 
 class SignedSession(httpx.AsyncClient):

@@ -10,6 +10,7 @@ source venv/bin/activate
 ```
 
 And install the dependencies
+
 ```sh
 pip install -r requirements.txt
 ```
@@ -18,7 +19,7 @@ pip install -r requirements.txt
 
 You can invoke 3 different parts of the script
 
-```
+```sh
 python -m main smartglass
 python -m main xhome
 python -m main xcloud
