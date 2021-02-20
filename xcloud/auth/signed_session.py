@@ -4,7 +4,6 @@ Signed Session
 A wrapper around httpx' AsyncClient which transparently calculates the "Signature" header.
 """
 
-import asyncio
 import httpx
 from .request_signer import RequestSigner
 

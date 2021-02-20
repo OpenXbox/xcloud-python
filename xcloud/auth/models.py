@@ -1,7 +1,5 @@
 from pydantic import BaseModel
 from typing import Dict, List, Optional
-from .constants import XalAppId, XalTitleId, XalRedirectUri,\
-    XalQueryDisplay, XalDeviceType, XalUserAgents
 
 
 class XADDisplayClaims(BaseModel):

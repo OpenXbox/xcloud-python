@@ -10,7 +10,13 @@ from .streaming_models import StreamLoginResponse, StreamSessionResponse, \
     StreamStateResponse, StreamConfig, StreamSetupState
 from .xcloud_models import TitlesResponse, TitleWaitTimeResponse, CloudGameTitle
 
-USER_AGENT_ANDROID = '{"conn":{"cell":{"carrier":"congstar","mcc":"262","mnc":"01","networkDetail":"{\"ci\":\"unknown\",\"pci\":\"unknown\",\"rat\":\"unknown\",\"signalStrengthDbm\":\"-2147483648\",\"pilotPowerSignalQuality\":\"-2147483648\",\"snr\":\"-2147483648\"}","roaming":"NotRoaming","strengthPct":100},"type":"Wifi","wifi":{"freq":5300,"strengthDbm":-60,"strengthPct":88}},"dev":{"hw":{"make":"Google","model":"Pixel 3a"},"os":{"name":"Android","ver":"11-RP1A.200720.009-30"}}}'
+USER_AGENT_ANDROID = (
+    '{"conn":{"cell":{"carrier":"congstar","mcc":"262","mnc":"01","networkDetail":"{\"ci\":\"unknown\",\"pci\":\"unknown\",'
+    '\"rat\":\"unknown\",\"signalStrengthDbm\":\"-2147483648\",\"pilotPowerSignalQuality\":\"-2147483648\",\"snr\":'
+    '\"-2147483648\"}","roaming":"NotRoaming","strengthPct":100},"type":"Wifi","wifi":{"freq":5300,"strengthDbm":-60,'
+    '"strengthPct":88}},"dev":{"hw":{"make":"Google","model":"Pixel 3a"},"os":{"name":"Android","ver":'
+    '"11-RP1A.200720.009-30"}}}'
+)
 
 
 class XCloudApi:
