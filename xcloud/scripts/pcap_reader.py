@@ -26,7 +26,7 @@ def get_info_rtp(rtp: rtp.RtpPacket) -> None:
     except:
         payload_name = '<UNKNOWN>'
 
-    return f'RTP: {payload_name.name} {rtp}'
+    return f'RTP: {payload_name.name} {rtp} SSRC={rtp.ssrc}'
 
 def get_info_teredo(teredo: teredo.TeredoPacket) -> None:
     info = f'TEREDO: {teredo}'
