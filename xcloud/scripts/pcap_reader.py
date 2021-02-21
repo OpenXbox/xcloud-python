@@ -9,7 +9,7 @@ from aiortc import rtp
 from aioice import stun
 from construct.lib import containers
 
-from ..protocol import packets
+from ..protocol import packets, teredo
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -27,9 +27,13 @@ def print_rtp(rtp: rtp.RtpPacket) -> None:
 
     print(f'RTP: {payload_name.name} {rtp}')
 
+def print_teredo(teredo: teredo.TeredoPacket) -> None:
+    print(f'TEREDO: {teredo}')
+
 PACKET_TYPES = [
     (stun.parse_message, print_stun),
-    (rtp.RtpPacket.parse, print_rtp)
+    (rtp.RtpPacket.parse, print_rtp),
+    (teredo.TeredoPacket.parse, print_teredo)
 ]
 
 def packet_filter(filepath):
@@ -56,6 +60,7 @@ def parse_file(pcap_filepath: str) -> None:
                 instance = cls(packet)
                 print_func(instance)
             except:
+                #LOG.exception('Failed to parse')
                 pass
         
 
