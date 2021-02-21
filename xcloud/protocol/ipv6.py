@@ -8,12 +8,44 @@ class IPv6Packet:
         self.ipv6_base = ipv6_base
     
     @property
+    def version(self) -> int:
+        return self.ipv6_base.v
+    
+    @property
+    def traffic_cls(self) -> int:
+        return self.ipv6_base.fc
+    
+    @property
+    def flow_label(self) -> int:
+        return self.ipv6_base.flow
+    
+    @property
+    def payload_len(self) -> int:
+        return self.ipv6_base.plen
+
+    @property
+    def next_header(self) -> int:
+        return self.ipv6_base.nxt
+
+    @property
+    def hop_limit(self) -> int:
+        return self.ipv6_base.hlim
+
+    @property
+    def src(self) -> bytes:
+        return self.ipv6_base.src
+    
+    @property
+    def dst(self) -> bytes:
+        return self.ipv6_base.dst
+
+    @property
     def data(self) -> bytes:
         return self.ipv6_base.data
 
     def __repr__(self):
         return (
-            f"IPv6Packet(V={self.ipv6_base.v}, SRC={self.ipv6_base.src}, DST={self.ipv6_base.dst}, PLEN={self.ipv6_base.plen} NEXT={self.ipv6_base.nxt} HLIM={self.ipv6_base.hlim}) DATA={self.data}"
+            f"IPv6Packet(V={self.version}, SRC={self.src}, DST={self.dst}, PLEN={self.payload_len} NEXT={self.next_header} HLIM={self.hop_limit}) DATA={self.data}"
         )
 
     @classmethod
