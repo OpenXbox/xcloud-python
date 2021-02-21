@@ -1,4 +1,8 @@
 import dpkt
+from typing import Any
+from enum import Enum
+
+NO_NEXT_HEADER = 59
 
 class IPv6Packet:
     def __init__(
@@ -40,12 +44,12 @@ class IPv6Packet:
         return self.ipv6_base.dst
 
     @property
-    def data(self) -> bytes:
+    def data(self) -> Any:
         return self.ipv6_base.data
 
     def __repr__(self):
         return (
-            f"IPv6Packet(V={self.version}, SRC={self.src}, DST={self.dst}, PLEN={self.payload_len} NEXT={self.next_header} HLIM={self.hop_limit}) DATA={self.data}"
+            f"IPv6Packet(V={self.version}, SRC={self.src}, DST={self.dst}, PLEN={self.payload_len} NEXT={self.next_header} HLIM={self.hop_limit})"
         )
 
     @classmethod

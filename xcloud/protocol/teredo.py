@@ -35,7 +35,7 @@ def convert_teredo_addr_to_endpoint(
     if not teredo_tuple:
         raise ValueError('Not a teredo address')
 
-    prefix, server_ipv4, flags, udp_port, client_ipv4 = \
+    _, server_ipv4, flags, udp_port, client_ipv4 = \
         unpack('!IIHHI', teredo_addr)
     
     # Deobfuscate/invert client address and port
