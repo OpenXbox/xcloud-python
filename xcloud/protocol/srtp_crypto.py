@@ -10,6 +10,8 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from . import utils
+
 class TransformDirection(Enum):
     Encrypt = 0
     Decrypt = 1
@@ -110,6 +112,9 @@ class SrtpContext:
         """
         MS-SRTP context
         """
+        self.roc = 0
+        self.seq = 0
+
         self.master_keys = master_keys
         self.session_keys = SrtpContext._derive_session_keys(
             self.master_keys.master_key, self.master_keys.master_salt
@@ -149,19 +154,13 @@ class SrtpContext:
         import binascii
         '''SRTP key derivation, https://tools.ietf.org/html/rfc3711#section-4.3'''
 
-        def bytes_to_int(b):
-            return int.from_bytes(b, byteorder='big')
-
-        def int_to_bytes(i, n_bytes):
-            return i.to_bytes(n_bytes, byteorder='big')
-
         assert len(master_key) == 128 // 8
         assert len(master_salt) == 112 // 8
-        salt = bytes_to_int(master_salt)
+        salt = utils.bytes_to_int(master_salt)
 
         DIV = lambda x, y: 0 if y == 0 else x // y
         prng = lambda iv: SrtpContext._crypt_ctr_oneshot(
-            master_key, int_to_bytes(iv, 16), b'\x00' * 16, max_bytes=max_bytes
+            master_key, utils.int_to_bytes(iv, 16), b'\x00' * 16, max_bytes=max_bytes
         )
         r = DIV(pkt_i, key_derivation_rate)  # pkt_i is always 48 bits
         derive_key_from_label = lambda label: prng(
@@ -189,19 +188,26 @@ class SrtpContext:
     def _encrypt(ctx: AESGCM, nonce: bytes, data: bytes, aad: bytes) -> bytes:
         return ctx.encrypt(nonce, data, aad)
 
-    def _get_transformed_nonce(self, transform_direction: TransformDirection) -> bytes:
-        # Skip first 2 bytes of Nonce key
-        nonce = bytearray(self.session_keys.salt_key[2:])
-        # TODO: Implement transform logic
-        # FIXME: Just tranforming the Nonce to a known value for
-        #        our single test packet
-        nonce[-1] += 1
-        return nonce
+    @staticmethod
+    def packet_index(roc, seq):
+        return seq + (roc << 16)
 
-    def decrypt(self, data: bytes, aad: bytes) -> bytes:
-        nonce = self._get_transformed_nonce(TransformDirection.Decrypt)
-        return SrtpContext._decrypt(self.decryptor_ctx, nonce, data, aad)
+    @staticmethod
+    def _calc_iv(salt, ssrc, pkt_i):
+        salt = utils.bytes_to_int(salt)
+        iv = ((ssrc << (48)) + pkt_i) ^ salt
+        return utils.int_to_bytes(iv, 12)
     
-    def encrypt(self, data: bytes, aad: bytes) -> RtpPacket:
-        nonce = self._get_transformed_nonce(TransformDirection.Encrypt)
-        return SrtpContext._encrypt(self.decryptor_ctx, nonce, data, aad)
+    def decrypt_packet(self, rtp_packet: bytes) -> RtpPacket:
+        rtp_header = rtp_packet[:12]
+        parsed = RtpPacket.parse(rtp_packet)
+        
+        if parsed.sequence_number < self.seq:
+            self.roc += 1
+        self.seq = parsed.sequence_number
+        pkt_i = SrtpContext.packet_index(self.roc, self.seq)
+        iv = SrtpContext._calc_iv(self.session_keys.salt_key[2:], parsed.ssrc, pkt_i)
+
+        decrypted_payload = SrtpContext._decrypt(self.decryptor_ctx, iv, parsed.payload, rtp_header)
+        parsed.payload = decrypted_payload
+        return parsed
