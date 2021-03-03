@@ -17,10 +17,8 @@ def test_init_master_keys(srtp_key: str):
     null_keys = srtp_crypto.SrtpMasterKeys.null_keys()
     dummy_keys = srtp_crypto.SrtpMasterKeys.dummy_keys()
 
-    assert len(from_base64.key1_buf) == 0x10
-    assert from_base64.key1_len == 0x10
-    assert len(from_base64.key2_buf) == 0x0E
-    assert from_base64.key2_len == 0x0E
+    assert len(from_base64.master_key) == 0x10
+    assert len(from_base64.master_salt) == 0x0E
 
     assert null_keys is not None
     assert dummy_keys is not None
