@@ -1,12 +1,15 @@
+import pytest
 from xcloud.protocol import srtp_crypto
 
 def test_decrypt(test_data: dict, crypto_context: srtp_crypto.SrtpContext):
     rtp_packet_raw = test_data['rtp_connection_probing.bin']
-
     rtp_header, rtp_body = rtp_packet_raw[:12], rtp_packet_raw[12:]
-    plaintext = crypto_context.decrypt(rtp_body, aad=rtp_header)
 
-    print(plaintext)
+    plaintext = crypto_context.decrypt(rtp_body, aad=rtp_header)
+    with pytest.raises(Exception):
+        # Skip 1 byte of "additional data" to ensure invalid data
+        crypto_context.decrypt(rtp_body, aad=rtp_header[1:])
+
     assert plaintext is not None
 
 def test_init_master_keys(srtp_key: str):
