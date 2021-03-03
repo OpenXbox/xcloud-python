@@ -15,60 +15,93 @@ class TransformDirection(Enum):
     Decrypt = 1
 
 class SrtpMasterKeys:
-    MASTER_KEY_SIZE = 30
+    MASTER_KEY_SIZE = 16
+    MASTER_SALT_SIZE = 14
     DUMMY_KEY = (
         b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F'
         b'\x10\x11\x12\x13'
     )
 
-    def __init__(self, master_key: bytes):
+    def __init__(self, master_key: bytes, master_salt: bytes):
         assert len(master_key) == SrtpMasterKeys.MASTER_KEY_SIZE
-        self.key1_buf = master_key[:0x10]
-        self.key1_len = len(self.key1_buf)
-        self.key1_counter = 0
+        assert len(master_salt) == SrtpMasterKeys.MASTER_SALT_SIZE
 
-        self.key2_buf = master_key[0x10:]
-        self.key2_len = len(self.key2_buf)
-        self.key2_counter = 0
+        self._master_key = master_key
+        self._master_key_id = 0
+
+        self._master_salt = master_salt
+        self._master_salt_id = 0
     
     @classmethod
-    def from_base64(cls, master_key_b64: str):
-        return cls(base64.b64decode(master_key_b64))
+    def from_base64(cls, master_bytes_b64: str):
+        decoded = base64.b64decode(master_bytes_b64)
+        return cls(
+            decoded[:SrtpMasterKeys.MASTER_KEY_SIZE],
+            decoded[SrtpMasterKeys.MASTER_KEY_SIZE:]
+        )
     
     @classmethod
     def null_keys(cls):
-        return cls(SrtpMasterKeys.MASTER_KEY_SIZE * b'\x00')
+        return cls(
+            SrtpMasterKeys.MASTER_KEY_SIZE * b'\x00',
+            SrtpMasterKeys.MASTER_SALT_SIZE * b'\x00',
+        )
     
     @classmethod
     def dummy_keys(cls):
-        dummy_key = SrtpMasterKeys.DUMMY_KEY[:0x10] + SrtpMasterKeys.DUMMY_KEY[:0x0E]
-        return cls(dummy_key)
+        return cls(
+            SrtpMasterKeys.DUMMY_KEY[:SrtpMasterKeys.MASTER_KEY_SIZE],
+            SrtpMasterKeys.DUMMY_KEY[:SrtpMasterKeys.MASTER_SALT_SIZE]
+        )
+    
+    @property
+    def master_key(self) -> bytes:
+        return self._master_key
 
-@dataclass
-class SrtpSessionKey:
-    buf: bytes
-    len: int
-    tag: bytes
+    @property
+    def master_key_id(self) -> int:
+        return self._master_key_id
 
-    def __init__(self, key: bytes):
-        self.buf = key
-        self.len = len(key)
-        self.tag = 1
+    @property
+    def master_salt(self) -> bytes:
+        return self._master_salt
+
+    @property
+    def master_salt_id(self) -> int:
+        return self._master_salt_id
 
 class SrtpSessionKeys:
-    def __init__(self, session_keys: List[SrtpSessionKey]):
-        assert len(session_keys) == 3
-        self.session_key_1 = session_keys[0]
-        self.session_key_2 = session_keys[1]
-        self.session_key_3 = session_keys[2]
+    SRTP_CRYPT = 0
+    SRTP_AUTH = 1
+    SRTP_SALT = 2
+    # Max count of keys
+    SRTP_SESSION_KEYS_MAX = 3
+
+    def __init__(self, crypt_key: bytes, auth_key: bytes, salt_key: bytes):
+        self._crypt_key = crypt_key
+        self._auth_key = auth_key
+        self._salt_key = salt_key
+    
+    @classmethod
+    def from_list(cls, session_keys: List[bytes]):
+        assert len(session_keys) == SrtpSessionKeys.SRTP_SESSION_KEYS_MAX
+        return cls(
+            session_keys[SrtpSessionKeys.SRTP_CRYPT],
+            session_keys[SrtpSessionKeys.SRTP_AUTH],
+            session_keys[SrtpSessionKeys.SRTP_SALT]
+        )
+
+    @property
+    def crypt_key(self) -> bytes:
+        return self._crypt_key
     
     @property
-    def aes_gcm_key(self) -> bytes:
-        return self.session_key_1.buf
-    
+    def auth_key(self) -> bytes:
+        return self._auth_key
+
     @property
-    def nonce_key(self) -> bytes:
-        return self.session_key_3.buf
+    def salt_key(self) -> bytes:
+        return self._salt_key
 
 class SrtpContext:
     _backend = default_backend()
@@ -79,27 +112,27 @@ class SrtpContext:
         """
         self.master_keys = master_keys
         self.session_keys = SrtpContext._derive_session_keys(
-            self.master_keys.key1_buf, self.master_keys.key2_buf
+            self.master_keys.master_key, self.master_keys.master_salt
         )
 
         # Set-up GCM crypto instances
-        self.decryptor_ctx = SrtpContext._init_gcm_cryptor(self.session_keys.aes_gcm_key)
-        self.decryptor_ctx = SrtpContext._init_gcm_cryptor(self.session_keys.aes_gcm_key)
+        self.decryptor_ctx = SrtpContext._init_gcm_cryptor(self.session_keys.crypt_key)
+        self.decryptor_ctx = SrtpContext._init_gcm_cryptor(self.session_keys.crypt_key)
     
     @classmethod
-    def from_base64(cls, master_key_b64: str):
+    def from_base64(cls, master_bytes_b64: str):
         return cls(
-            SrtpMasterKeys.from_base64(master_key_b64)
+            SrtpMasterKeys.from_base64(master_bytes_b64)
         )
     
     @classmethod
-    def from_bytes(cls, master_key: bytes):
+    def from_bytes(cls, master_key: bytes, master_salt: bytes):
         return cls(
-            SrtpMasterKeys(master_key)
+            SrtpMasterKeys(master_key, master_salt)
         )
 
     @staticmethod
-    def _derive_single_key(input_key: bytes, bitmask: int = 0) -> bytes:
+    def _derive_single_key(input_key: bytes, key_index: int = 0) -> bytes:
         keysize = len(input_key)
         keyout = bytearray(b'\x00' * 16)
 
@@ -111,10 +144,10 @@ class SrtpContext:
             if keysize != 1:
                 keyout[12] = input_key[keysize - 2]
                 if keysize >= 3:
-                    key_index = 0
+                    pos = 0
                     for _ in range(2, keysize):
-                        keyout[key_index + 11] = input_key[key_index + keysize - 3]
-                        key_index = key_index - 1
+                        keyout[pos + 11] = input_key[pos + keysize - 3]
+                        pos -= 1
 
         if keysize <= 13:
             null_count = 14 - keysize
@@ -124,10 +157,10 @@ class SrtpContext:
         for index in range(14, 16):
             keyout[index] = 0
         
-        if bitmask:
+        if key_index:
             len_before_xor = len(keyout)
             value_to_xor = struct.unpack_from('<I', keyout, 4)[0]
-            value_to_xor ^= bitmask
+            value_to_xor ^= (key_index * 0x1000000)
             keyout = keyout[:4] + struct.pack('<I', value_to_xor) + keyout[8:]
             assert len(keyout) == len_before_xor
         return keyout
@@ -146,20 +179,16 @@ class SrtpContext:
         return cipher_out
 
     @staticmethod
-    def _derive_session_keys(key1: bytes, key2: bytes) -> SrtpSessionKeys:
-        session1 = SrtpContext._derive_single_key(key2)
-        session2 = SrtpContext._derive_single_key(key2, 0x1000000)
-        session3 = SrtpContext._derive_single_key(key2, 0x2000000)
+    def _derive_session_keys(master_key: bytes, master_salt: bytes) -> SrtpSessionKeys:
+        tmp1 = SrtpContext._derive_single_key(master_salt, SrtpSessionKeys.SRTP_CRYPT)
+        tmp2 = SrtpContext._derive_single_key(master_salt, SrtpSessionKeys.SRTP_AUTH)
+        tmp3 = SrtpContext._derive_single_key(master_salt, SrtpSessionKeys.SRTP_SALT)
   
-        session1 = SrtpContext._crypt_ctr_oneshot(key1, session1, b'\x00' * 16)
-        session2 = SrtpContext._crypt_ctr_oneshot(key1, session2, b'\x00' * 16)
-        session3 = SrtpContext._crypt_ctr_oneshot(key1, session3, b'\x00' * 16, max_bytes=14)
+        crypt_key = SrtpContext._crypt_ctr_oneshot(master_key, tmp1, b'\x00' * 16)
+        auth_key = SrtpContext._crypt_ctr_oneshot(master_key, tmp2, b'\x00' * 16)
+        salt_key = SrtpContext._crypt_ctr_oneshot(master_key, tmp3, b'\x00' * 16, max_bytes=14)
 
-        return SrtpSessionKeys([
-            SrtpSessionKey(session1),
-            SrtpSessionKey(session2),
-            SrtpSessionKey(session3)
-        ])
+        return SrtpSessionKeys(crypt_key, auth_key, salt_key)
 
     @staticmethod
     def _init_gcm_cryptor(key: bytes) -> AESGCM:
@@ -175,11 +204,11 @@ class SrtpContext:
 
     def _get_transformed_nonce(self, transform_direction: TransformDirection) -> bytes:
         # Skip first 2 bytes of Nonce key
-        nonce = bytearray(self.session_keys.nonce_key[2:])
+        nonce = bytearray(self.session_keys.salt_key[2:])
         # TODO: Implement transform logic
         # FIXME: Just tranforming the Nonce to a known value for
         #        our single test packet
-        nonce[-1] = nonce[-1] + 1
+        nonce[-1] += 1
 
         return nonce
 
