@@ -145,46 +145,29 @@ class SrtpContext:
         return cipher_out
 
     @staticmethod
-    def _derive_single_key(
-        master_key: bytes,
-        master_salt: bytes,
-        key_index: Optional[int] = 0,
-        max_bytes: Optional[int] = 16
-    ) -> bytes:
-        keysize = len(master_salt)
-        keyout = bytearray(b'\x00' * 16)
+    def _derive_single_key(master_key, master_salt, key_index: int = 0, max_bytes: int = 16, pkt_i=0, key_derivation_rate=0):
+        import binascii
+        '''SRTP key derivation, https://tools.ietf.org/html/rfc3711#section-4.3'''
 
-        if keysize >= 14:
-            keysize = 14
+        def bytes_to_int(b):
+            return int.from_bytes(b, byteorder='big')
 
-        if keysize:
-            keyout[13] = master_salt[keysize - 1]
-            if keysize != 1:
-                keyout[12] = master_salt[keysize - 2]
-                if keysize >= 3:
-                    pos = 0
-                    for _ in range(2, keysize):
-                        keyout[pos + 11] = master_salt[pos + keysize - 3]
-                        pos -= 1
+        def int_to_bytes(i, n_bytes):
+            return i.to_bytes(n_bytes, byteorder='big')
 
-        if keysize <= 13:
-            null_count = 14 - keysize
-            for i in range(0, null_count):
-                keyout[i] = 0
+        assert len(master_key) == 128 // 8
+        assert len(master_salt) == 112 // 8
+        salt = bytes_to_int(master_salt)
 
-        for index in range(14, 16):
-            keyout[index] = 0
+        DIV = lambda x, y: 0 if y == 0 else x // y
+        prng = lambda iv: SrtpContext._crypt_ctr_oneshot(
+            master_key, int_to_bytes(iv, 16), b'\x00' * 16, max_bytes=max_bytes
+        )
+        r = DIV(pkt_i, key_derivation_rate)  # pkt_i is always 48 bits
+        derive_key_from_label = lambda label: prng(
+            (salt ^ ((label << 48) + r)) << 16)
         
-        if key_index:
-            len_before_xor = len(keyout)
-            value_to_xor = struct.unpack_from('<I', keyout, 4)[0]
-            value_to_xor ^= (key_index * 0x1000000)
-            keyout = keyout[:4] + struct.pack('<I', value_to_xor) + keyout[8:]
-            assert len(keyout) == len_before_xor
-
-        # Encrypt the key
-        keyout = SrtpContext._crypt_ctr_oneshot(master_key, keyout, b'\x00' * 16, max_bytes=max_bytes)
-        return keyout
+        return derive_key_from_label(key_index)
 
     @staticmethod
     def _derive_session_keys(master_key: bytes, master_salt: bytes) -> SrtpSessionKeys:
