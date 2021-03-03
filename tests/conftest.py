@@ -59,5 +59,5 @@ def srtp_key() -> str:
     return 'RdHzuLLVGuO1aHILIEVJ1UzR7RWVioepmpy+9SRf'
 
 @pytest.fixture(scope='session')
-def crypto_context(srtp_key: str) -> srtp_crypto.MsSrtpCrypto:
-    return srtp_crypto.MsSrtpCrypto(srtp_key)
+def crypto_context(srtp_key: str) -> srtp_crypto.SrtpContext:
+    return srtp_crypto.SrtpContext.from_base64(srtp_key)
