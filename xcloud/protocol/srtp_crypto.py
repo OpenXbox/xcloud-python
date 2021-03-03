@@ -132,21 +132,39 @@ class SrtpContext:
         )
 
     @staticmethod
-    def _derive_single_key(input_key: bytes, key_index: int = 0) -> bytes:
-        keysize = len(input_key)
+    def _crypt_ctr_oneshot(key: bytes, iv: bytes, plaintext: bytes, max_bytes: Optional[int] = None):
+        """
+        Encrypt data with AES-CTR (one-shot)
+        """
+        cipher = Cipher(algorithms.AES(key), modes.CTR(iv))
+        encryptor = cipher.encryptor()
+        cipher_out = encryptor.update(plaintext) + encryptor.finalize()
+        if max_bytes:
+            # Trim to desired output
+            cipher_out = cipher_out[:max_bytes]
+        return cipher_out
+
+    @staticmethod
+    def _derive_single_key(
+        master_key: bytes,
+        master_salt: bytes,
+        key_index: Optional[int] = 0,
+        max_bytes: Optional[int] = 16
+    ) -> bytes:
+        keysize = len(master_salt)
         keyout = bytearray(b'\x00' * 16)
 
         if keysize >= 14:
             keysize = 14
 
         if keysize:
-            keyout[13] = input_key[keysize - 1]
+            keyout[13] = master_salt[keysize - 1]
             if keysize != 1:
-                keyout[12] = input_key[keysize - 2]
+                keyout[12] = master_salt[keysize - 2]
                 if keysize >= 3:
                     pos = 0
                     for _ in range(2, keysize):
-                        keyout[pos + 11] = input_key[pos + keysize - 3]
+                        keyout[pos + 11] = master_salt[pos + keysize - 3]
                         pos -= 1
 
         if keysize <= 13:
@@ -163,30 +181,16 @@ class SrtpContext:
             value_to_xor ^= (key_index * 0x1000000)
             keyout = keyout[:4] + struct.pack('<I', value_to_xor) + keyout[8:]
             assert len(keyout) == len_before_xor
+
+        # Encrypt the key
+        keyout = SrtpContext._crypt_ctr_oneshot(master_key, keyout, b'\x00' * 16, max_bytes=max_bytes)
         return keyout
 
     @staticmethod
-    def _crypt_ctr_oneshot(key: bytes, iv: bytes, plaintext: bytes, max_bytes: Optional[int] = None):
-        """
-        Encrypt data with AES-CTR (one-shot)
-        """
-        cipher = Cipher(algorithms.AES(key), modes.CTR(iv))
-        encryptor = cipher.encryptor()
-        cipher_out = encryptor.update(plaintext) + encryptor.finalize()
-        if max_bytes:
-            # Trim to desired output
-            cipher_out = cipher_out[:max_bytes]
-        return cipher_out
-
-    @staticmethod
     def _derive_session_keys(master_key: bytes, master_salt: bytes) -> SrtpSessionKeys:
-        tmp1 = SrtpContext._derive_single_key(master_salt, SrtpSessionKeys.SRTP_CRYPT)
-        tmp2 = SrtpContext._derive_single_key(master_salt, SrtpSessionKeys.SRTP_AUTH)
-        tmp3 = SrtpContext._derive_single_key(master_salt, SrtpSessionKeys.SRTP_SALT)
-  
-        crypt_key = SrtpContext._crypt_ctr_oneshot(master_key, tmp1, b'\x00' * 16)
-        auth_key = SrtpContext._crypt_ctr_oneshot(master_key, tmp2, b'\x00' * 16)
-        salt_key = SrtpContext._crypt_ctr_oneshot(master_key, tmp3, b'\x00' * 16, max_bytes=14)
+        crypt_key = SrtpContext._derive_single_key(master_key, master_salt, SrtpSessionKeys.SRTP_CRYPT)
+        auth_key = SrtpContext._derive_single_key(master_key, master_salt, SrtpSessionKeys.SRTP_AUTH)
+        salt_key = SrtpContext._derive_single_key(master_key, master_salt, SrtpSessionKeys.SRTP_SALT, max_bytes=14)
 
         return SrtpSessionKeys(crypt_key, auth_key, salt_key)
 
@@ -209,7 +213,6 @@ class SrtpContext:
         # FIXME: Just tranforming the Nonce to a known value for
         #        our single test packet
         nonce[-1] += 1
-
         return nonce
 
     def decrypt(self, data: bytes, aad: bytes) -> bytes:
