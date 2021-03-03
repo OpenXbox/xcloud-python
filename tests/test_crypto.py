@@ -1,4 +1,5 @@
 import pytest
+import binascii
 from xcloud.protocol import srtp_crypto
 
 def test_decrypt(test_data: dict, crypto_context: srtp_crypto.SrtpContext):
@@ -22,3 +23,10 @@ def test_init_master_keys(srtp_key: str):
 
     assert null_keys is not None
     assert dummy_keys is not None
+
+def test_derive_session_keys(srtp_key: str):
+    session_keys = srtp_crypto.SrtpContext.from_base64(srtp_key).session_keys
+
+    assert binascii.hexlify(session_keys.crypt_key) == b'45eaf77f1262638cf5d3ad0db5838d1d'
+    assert binascii.hexlify(session_keys.auth_key) == b'd03d6382e1fec9480feb65e603c81e48'
+    assert binascii.hexlify(session_keys.salt_key) == b'dad2a3c84f32ff7dbca6802ea223'
