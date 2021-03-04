@@ -106,7 +106,7 @@ class XcloudPcapParser:
                     self.xbox_mac = eth.src
                 
                 if self.xbox_mac:
-                    is_client = (eth.src == self.xbox_mac)
+                    is_client = (eth.dst == self.xbox_mac)
                 else:
                     is_client = None
 
