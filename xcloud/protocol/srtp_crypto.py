@@ -121,8 +121,7 @@ class SrtpContext:
         )
 
         # Set-up GCM crypto instances
-        self.decryptor_ctx = SrtpContext._init_gcm_cryptor(self.session_keys.crypt_key)
-        self.decryptor_ctx = SrtpContext._init_gcm_cryptor(self.session_keys.crypt_key)
+        self.crypto_ctx = SrtpContext._init_gcm_cryptor(self.session_keys.crypt_key)
     
     @classmethod
     def from_base64(cls, master_bytes_b64: str):
@@ -151,7 +150,6 @@ class SrtpContext:
 
     @staticmethod
     def _derive_single_key(master_key, master_salt, key_index: int = 0, max_bytes: int = 16, pkt_i=0, key_derivation_rate=0):
-        import binascii
         '''SRTP key derivation, https://tools.ietf.org/html/rfc3711#section-4.3'''
 
         assert len(master_key) == 128 // 8
@@ -198,7 +196,7 @@ class SrtpContext:
         iv = ((ssrc << (48)) + pkt_i) ^ salt
         return utils.int_to_bytes(iv, 12)
     
-    def decrypt_packet(self, rtp_packet: bytes) -> RtpPacket:
+    def _crypt_packet(self, rtp_packet: bytes, encrypt: bool) -> RtpPacket:
         rtp_header = rtp_packet[:12]
         parsed = RtpPacket.parse(rtp_packet)
         
@@ -208,6 +206,16 @@ class SrtpContext:
         pkt_i = SrtpContext.packet_index(self.roc, self.seq)
         iv = SrtpContext._calc_iv(self.session_keys.salt_key[2:], parsed.ssrc, pkt_i)
 
-        decrypted_payload = SrtpContext._decrypt(self.decryptor_ctx, iv, parsed.payload, rtp_header)
-        parsed.payload = decrypted_payload
+        if encrypt:
+            transformed_payload = SrtpContext._encrypt(self.crypto_ctx, iv, parsed.payload, rtp_header)
+        else:
+            transformed_payload = SrtpContext._decrypt(self.crypto_ctx, iv, parsed.payload, rtp_header)
+
+        parsed.payload = transformed_payload
         return parsed
+
+    def encrypt_packet(self, rtp_packet: bytes) -> RtpPacket:
+        return self._crypt_packet(rtp_packet, True)
+
+    def decrypt_packet(self, rtp_packet: bytes) -> RtpPacket:
+        return self._crypt_packet(rtp_packet, False)
