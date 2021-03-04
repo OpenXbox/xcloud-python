@@ -1,7 +1,10 @@
-from typing import Dict
+from typing import Dict, Tuple
 import os
 import pytest
 from binascii import unhexlify
+
+from xcloud.protocol import srtp_crypto
+
 
 @pytest.fixture(scope='session')
 def test_data() -> Dict[str, bytes]:
@@ -39,3 +42,23 @@ def teredo_packet() -> bytes:
         '6000000000003b1520010000338c24f41c38f3fdd2f3c93d20010000'
         '338c24f4043b30e3d2f3c93d01049eb8960803080000c0a889db0c02'
     )
+
+@pytest.fixture(scope='session')
+def session_id() -> str:
+    return 'ED309CA5-F87C-439D-A429-63F417B552FA'
+
+@pytest.fixture(scope='session')
+def ice_credentials_client() -> Tuple[str, str]:
+    return ('m99KewV+44E=', 'AneALie0L4P2tpvbh76nremwgQrT12/R3UYTG5VmUJ8=')
+
+@pytest.fixture(scope='session')
+def ice_credentials_host() -> Tuple[str, str]:
+    return ('5yUsZtOzQ+w=', 'bWpvx/cXTk3/IeadJHO4T19W/OZopsbn0MwTAZqZu8w=')
+
+@pytest.fixture(scope='session')
+def srtp_key() -> str:
+    return 'RdHzuLLVGuO1aHILIEVJ1UzR7RWVioepmpy+9SRf'
+
+@pytest.fixture(scope='session')
+def crypto_context(srtp_key: str) -> srtp_crypto.SrtpContext:
+    return srtp_crypto.SrtpContext.from_base64(srtp_key)

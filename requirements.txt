@@ -5,6 +5,7 @@ httpx
 aiortc
 construct
 dpkt
+hexdump
 
 wheel
 flake8
