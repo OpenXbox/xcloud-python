@@ -4,7 +4,7 @@ PCAP Parser for XCloud network traffic
 import argparse
 import logging
 import struct
-from typing import Any, Optional, Generator
+from typing import Any, Optional
 
 import dpkt
 from hexdump import hexdump
@@ -25,6 +25,7 @@ class XcloudPcapParser:
         if srtp_key:
             self.outgoing_crypto = srtp_crypto.SrtpContext.from_base64(srtp_key)
             self.incoming_crypto = srtp_crypto.SrtpContext.from_base64(srtp_key)
+        self.xbox_mac: Optional[bytes] = None
 
     @property
     def PACKET_TYPES(self):
@@ -48,11 +49,14 @@ class XcloudPcapParser:
         if self.incoming_crypto and self.outgoing_crypto:
             rtp_packet = rtp.serialize()
             try:
-                if is_client:
-                    rtp_decrypted = self.outgoing_crypto.decrypt_packet(rtp_packet)
+                if isinstance(is_client, bool):
+                    if is_client:
+                        rtp_decrypted = self.outgoing_crypto.decrypt_packet(rtp_packet)
+                    else:
+                        rtp_decrypted = self.incoming_crypto.decrypt_packet(rtp_packet)
+                    info_str += "\n" + hexdump(rtp_decrypted.payload, result='return') + "\n"
                 else:
-                    rtp_decrypted = self.incoming_crypto.decrypt_packet(rtp_packet)
-                info_str += "\n" + hexdump(rtp_decrypted.payload, result='return') + "\n"
+                    info_str += "\n UNKNOWN DIRECTION \n"
             except Exception:
                 info_str += "\n DECRYPTION FAILED \n"
         return info_str
@@ -67,13 +71,12 @@ class XcloudPcapParser:
             info += f'\n -> TEREDO-WRAPPED: {subpacket_info}'
         return info
 
-    def get_info_general(self, packet: Any) -> Optional[str]:
+    def get_info_general(self, packet: Any, is_client: bool) -> Optional[str]:
         if isinstance(packet, dpkt.udp.UDP):
             data = bytes(packet.data)
             for cls, info_func in self.PACKET_TYPES:
                 try:
                     instance = cls(data)
-                    is_client = (packet.dport == 54881)
                     info = info_func(instance, is_client)
                     return info
                 except:
@@ -96,12 +99,21 @@ class XcloudPcapParser:
                 if not isinstance(ip.data, dpkt.udp.UDP):
                     continue
 
-                yield(ip, ts)
+                # Check packet direction (client/host)
+                if not self.xbox_mac and ip.data.sport == 3074:
+                    self.xbox_mac = eth.src
+                
+                if self.xbox_mac:
+                    is_client = (eth.src == self.xbox_mac)
+                else:
+                    is_client = None
+
+                yield(ip, ts, is_client)
 
 
     def parse_file(self, pcap_filepath: str) -> None:
-        for packet, timestamp in self.packet_filter(pcap_filepath):
-            info = self.get_info_general(packet.data)
+        for packet, timestamp, is_client in self.packet_filter(pcap_filepath):
+            info = self.get_info_general(packet.data, is_client)
             if info:
                 print(info)
 
