@@ -9,12 +9,30 @@ from aiortc.rtp import RtpPacket
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives import hashes, hmac
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from . import utils
 
 class TransformDirection(Enum):
     Encrypt = 0
     Decrypt = 1
+
+class DigestType(Enum):
+    SHA1 = 0
+    SHA224 = 1
+    SHA256 = 2
+    SHA512_224 = 3
+    SHA512_256 = 4
+    SHA384 = 5
+
+class KeyedHashAlgorithm(Enum):
+    HMAC_MD5 = 0
+    HMAC_SHA1 = 1
+    HMAC_SHA224 = 2
+    HMAC_SHA256 = 3
+    HMAC_SHA384 = 4
+    HMAC_SHA512 = 5
 
 class SrtpMasterKeys:
     MASTER_KEY_SIZE = 16
@@ -149,7 +167,27 @@ class SrtpContext:
         return cipher_out
 
     @staticmethod
-    def _derive_single_key(master_key, master_salt, key_index: int = 0, max_bytes: int = 16, pkt_i=0, key_derivation_rate=0):
+    def _get_ping_key(master_key: bytes, salt_bytes: bytes, hash_algo: DigestType) -> bytes:
+        if hash_algo == DigestType.SHA1:
+            algo = hashes.SHA1()
+        elif hash_algo == DigestType.SHA224:
+            algo = hashes.SHA224()
+        elif hash_algo == DigestType.SHA256:
+            algo = hashes.SHA256()
+        elif hash_algo == DigestType.SHA512_224:
+            algo = hashes.SHA512_224()
+        elif hash_algo == DigestType.SHA512_256:
+            algo = hashes.SHA512_256()
+        elif hash_algo == DigestType.SHA384:
+            algo = hashes.SHA384()
+        else:
+            algo = hashes.SHA512()
+
+        derivation_ctx = PBKDF2HMAC(algo, 0x20, salt_bytes, iterations=100000)
+        return derivation_ctx.derive(master_key)
+
+    @staticmethod
+    def _derive_single_key(master_key: bytes, master_salt: bytes, key_index: int = 0, max_bytes: int = 16, pkt_i=0, key_derivation_rate=0) -> bytes:
         '''SRTP key derivation, https://tools.ietf.org/html/rfc3711#section-4.3'''
 
         assert len(master_key) == 128 // 8
@@ -175,8 +213,30 @@ class SrtpContext:
         return SrtpSessionKeys(crypt_key, auth_key, salt_key)
 
     @staticmethod
+    def _create_keyed_hasher(key: bytes, keyed_hash_algo: KeyedHashAlgorithm) -> hmac.HMAC:
+        if keyed_hash_algo == KeyedHashAlgorithm.HMAC_MD5:
+            algo = hashes.MD5()
+        elif keyed_hash_algo == KeyedHashAlgorithm.HMAC_SHA1:
+            algo = hashes.SHA1()
+        elif keyed_hash_algo == KeyedHashAlgorithm.HMAC_SHA224:
+            algo = hashes.SHA224()
+        elif keyed_hash_algo == KeyedHashAlgorithm.HMAC_SHA256:
+            algo = hashes.SHA256()
+        elif keyed_hash_algo == KeyedHashAlgorithm.HMAC_SHA384:
+            algo = hashes.SHA384()
+        elif keyed_hash_algo == KeyedHashAlgorithm.HMAC_SHA512:
+            algo = hashes.SHA512()
+
+        return hmac.HMAC(key, algo)
+
+    @staticmethod
     def _init_gcm_cryptor(key: bytes) -> AESGCM:
         return AESGCM(key)
+
+    def get_ping_signer(self, salt: bytes) -> hmac.HMAC:
+        assert len(salt) == 2, 'Salt of invalid size, expected 2 bytes'
+        ping_key = SrtpContext._get_ping_key(self.master_keys.master_key, salt, DigestType.SHA256)
+        return SrtpContext._create_keyed_hasher(ping_key, KeyedHashAlgorithm.HMAC_SHA256)
 
     @staticmethod
     def _decrypt(ctx: AESGCM, nonce: bytes, data: bytes, aad: bytes) -> bytes:

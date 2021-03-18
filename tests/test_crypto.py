@@ -29,3 +29,44 @@ def test_derive_session_keys(srtp_key: str):
     assert binascii.hexlify(session_keys.crypt_key) == b'45eaf77f1262638cf5d3ad0db5838d1d'
     assert binascii.hexlify(session_keys.auth_key) == b'd03d6382e1fec9480feb65e603c81e48'
     assert binascii.hexlify(session_keys.salt_key) == b'dad2a3c84f32ff7dbca6802ea223'
+
+def test_ping_packet_signing_static():
+    # full udp payload: ffff010000000000d0c87bfa07d4e7fc9909d96e3cb3977d5232bbb391932236d56411f82d103bd5
+    # srtp_key: 19J859/D70mZNfu9tEUdxgUVVMbRDkV/L2LavviX
+
+    master_key = binascii.unhexlify('d7d27ce7dfc3ef499935fbbdb4451dc6')
+    salt = binascii.unhexlify('ffff')
+    data_to_sign =  binascii.unhexlify('00000000')
+
+    ping_key = srtp_crypto.SrtpContext._get_ping_key(
+        master_key=master_key,
+        salt_bytes=salt,
+        hash_algo=srtp_crypto.DigestType.SHA256
+    )
+
+    ping_signing_ctx = srtp_crypto.SrtpContext._create_keyed_hasher(
+        ping_key, srtp_crypto.KeyedHashAlgorithm.HMAC_SHA256
+    )
+
+    ping_signing_ctx.update(data_to_sign)
+    signature = ping_signing_ctx.finalize()
+
+    assert binascii.hexlify(ping_key) == b'9dda3a76d9e73b41ad8b37881e9d5af973271573d2fd3783dd6650b9840afb94'
+    assert len(signature) == 0x20
+    assert binascii.hexlify(signature) == b'd0c87bfa07d4e7fc9909d96e3cb3977d5232bbb391932236d56411f82d103bd5'
+
+def test_ping_packet_signing():
+    # full udp payload: ffff010000000000d0c87bfa07d4e7fc9909d96e3cb3977d5232bbb391932236d56411f82d103bd5
+
+    srtp_key = '19J859/D70mZNfu9tEUdxgUVVMbRDkV/L2LavviX'
+    salt = binascii.unhexlify('ffff')
+    data_to_sign =  binascii.unhexlify('00000000')
+
+    ctx = srtp_crypto.SrtpContext.from_base64(srtp_key)
+    ping_signing_ctx = ctx.get_ping_signer(salt)
+
+    ping_signing_ctx.update(data_to_sign)
+    signature = ping_signing_ctx.finalize()
+
+    assert len(signature) == 0x20
+    assert binascii.hexlify(signature) == b'd0c87bfa07d4e7fc9909d96e3cb3977d5232bbb391932236d56411f82d103bd5'
